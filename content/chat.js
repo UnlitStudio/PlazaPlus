@@ -440,6 +440,9 @@ commands.reply = function(cb, param, dest) {
 	parsePost('/whisper '+lastWhisp+' '+param.join(' '), dest, cb);
 };
 commands.r = commands.reply;
+commands.help = function(cb) {
+	cb(chatMsg("Sorry. 3DSPlaza lied to you. That command doesn't exist. :("));
+};
 
 function setDest(d) {
 	if (!_.isNil(d)) {
@@ -768,7 +771,7 @@ var chatRead = _.throttle(function() {
 });
 chatRead(); new MutationObserver(chatRead).observe($('#demo')[0], {childList: true});
 
-var onlineList = {}, onlineCache = false, onlineExpand = {mod: true, normal: true, banned: true};
+var onlineList = {}, onlineCache = false;
 var onlineTime = [0,0,0], onlineTimer = false;
 var onlineRead = _.throttle(function() {
 	var html = $('#online').html();
@@ -864,12 +867,8 @@ function onlineWrite() {
 	function section(id, title) {
 		var div = '#online';
 		if (title) {
-			$('<div/>', {text: title, 'class': 'onlinehead'}).click(function() {
-				var exp = !onlineExpand[id]; onlineExpand[id] = exp;
-				if (exp) div.slideDown(); else div.slideUp();
-			}).appendTo('#online');
+			$('<div/>', {text: title, 'class': 'onlinehead'}).appendTo('#online');
 			div = $('<div/>').appendTo('#online');
-			if (!onlineExpand[id]) div.hide();
 		}
 		_.each(group[id], function(user) { entry(user, div); });
 	}
@@ -888,5 +887,4 @@ function onlineWrite() {
 }
 onlineRead(); new MutationObserver(onlineRead).observe($('#online')[0], {childList: true});
 
-//chatMsg('Plaza+ is loaded. Type /+help to access the help system.');
-chatMsg('Plaza+ is loaded.');
+chatMsg('Welcome to Plaza+! Type /+help for help with Plaza+.');
