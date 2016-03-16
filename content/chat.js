@@ -46,8 +46,8 @@ var oldsp;
 (function() {
 	var s = document.createElement('script');
 	s.src = chrome.extension.getURL('content/chatInject.js');
-	s.onload = function() { this.parentNode.removeChild(this); };
-	(document.head || document.documentElement).appendChild(s);
+	s.onload = function() { $(this).remove(); };
+	document.body.appendChild(s);
 	var evt = document.createEvent('Event');
 	evt.initEvent('plusSendChat', true, false);
 	oldsp = function() { document.dispatchEvent(evt); };
@@ -762,10 +762,11 @@ var chatRead = _.throttle(function() {
 				v = '<!--plused--><span class="'+b+'" user="'+name+'"><img '+i+'> '+v+'</span>';
 			} else v = '<!--plused-->' + v;
 		}
-		return linker.link(v) + '<!--d-->';
+		if (_.includes(v, '<script')) return v;
+		return linker.link(v);
 	});
 	if (whisp) lastWhisp = whisp;
-	chatCache = _.join(res, ''); var idCheck = chatCache.match(/<!---cmid:(\d+)-->/);
+	chatCache = _.join(res, '<!--d-->'); var idCheck = chatCache.match(/<!---cmid:(\d+)-->/);
 	if (idCheck) chatCheck = idCheck[1];
 	$('#demo').html(chatCache);
 });
@@ -885,6 +886,17 @@ function onlineWrite() {
 	} else _.each(onlineList, entry);
 	onlineCache = $('#online').html();
 }
-onlineRead(); new MutationObserver(onlineRead).observe($('#online')[0], {childList: true});
+new MutationObserver(onlineRead).observe($('#online')[0], {childList: true});
+
+if ($('#overrideWarning').length) {
+	console.log('Saving the world from imminent destruction! Wait. Only Plaza+ is being saved...');
+	$('#overrideWarning').html('Once again, the day is saved thanks to...! Plaza+...<br>');
+	// ffs olivier...
+	lockAsync(); $('#bericht').attr('id', 'betemp').removeAttr('maxlength');
+	$('<input>', {id: 'bericht'}).appendTo('body');
+	document.addEventListener('plusStudy', _.once(function() {
+		$('#bericht').remove(); $('#betemp').attr('id', 'bericht'); freeAsync();
+	}));
+}
 
 chatMsg('Welcome to Plaza+! Type /+help for help with Plaza+.');
