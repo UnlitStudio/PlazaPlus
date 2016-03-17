@@ -34,8 +34,8 @@ function microtime() {
 
 var chatroom = /\?room=(.*)/.exec($('.contain_inside form').attr('action'));
 chatroom = chatroom ? chatroom[1] : 'v3original';
-var port = chrome.runtime.connect({name: 'chat:'+chatroom});
-var mainTab = false, active = 0, dests = {}, icons = {}, aliases = {}, focusList = [];
+var port = chrome.runtime.connect({name: 'chat:'+chatroom}), mainTab = false;
+var active = 0, dests = {}, icons = {}, aliases = {}, focusList = [], isFocus = false;
 var focusMode = 'blur', asyncLock = 0, notifyNames = '', notifyWhispers = false, lastWhisp = false;
 var onlineSort = false, colorNormal = '#0000ff', colorNoob = '#00ffff', colorMod = '#00ff00';
 var colorBanned = '#ff0000', colorIgnored = '#000000';
@@ -533,6 +533,7 @@ function stripHTML(v) {
 
 function lockAsync() {
 	asyncLock = asyncLock + 1;
+	if (asyncLock == 1) isFocus = $('#bericht').is(':focus');
 	$('#bericht').val(''); $('#bericht').attr('disabled', true);
 	$('#bericht').attr('placeholder', 'Please wait...');
 }
@@ -540,8 +541,8 @@ function lockAsync() {
 function freeAsync() {
 	asyncLock = Math.max(asyncLock - 1, 0);
 	if (asyncLock > 0) return;
-	$('#bericht').attr('disabled', false);
-	$('#bericht').focus(); setDest();
+	$('#bericht').attr('disabled', false); setDest();
+	if (isFocus) $('#bericht').focus();
 }
 
 function parsePost(txt, dest, cb) {
