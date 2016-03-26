@@ -190,7 +190,7 @@ destTypes.pm = {
 					cb(false, "You can't PM "+user+" because you aren't friends with them.");
 				else cb(false, "An unknown error occurred while sending the PM to "+user+".");
 			}, timeout: 3000, dataType: 'text',
-			error: function(cb) { cb(false, "Plaza+ can't confirm if your PM was sent to "+user+"."); }
+			error: function() { cb(false, "Plaza+ can't confirm if your PM was sent to "+user+"."); }
 		});
 		setDest({type: 'chat'});
 	},
