@@ -49,7 +49,7 @@ form input[name=color] { width: 130px; }
 	-webkit-user-select: none; moz-user-select: none; user-select: none;
 	pointer-events: none; opacity: 0; transition: all .5s;
 	&.active { pointer-events: initial; bottom: 32px; opacity: 1; }
-	&:after, $:before {
+	&:after, &:before {
 		position: absolute; top: 100%; left: 50%; width: 0; height: 0;
 		border: solid transparent; content: " "; pointer-events: none;
 	}
@@ -69,6 +69,6 @@ form input[name=color] { width: 130px; }
 	}
 	& > hr {
 		border: 0; height: 1px; background: rgb(197, 197, 197); margin: 2px 0;
-		&:first-of-type: { visibility: hidden; margin: 2px 0 0 0; }
+		&:first-of-type { visibility: hidden; margin: 2px 0 0 0; }
 	}
 }
