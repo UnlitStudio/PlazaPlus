@@ -141,15 +141,13 @@ destTypes.whisper = {
 			return 'Whisper '+this.tag+' ('+this.user+')';
 		return 'Whisper '+this.user;
 	},
-	send: function(cb, txt) {
-		sendChat('/whisperto '+this.user+' '+txt, true); cb(true);
-	},
+	send: function(cb, txt) { sendChat('/whisperto '+this.user+' '+txt, true); cb(true); },
 	usable: function(cb) {
 		var user = this.user;
 		$.ajax('../chat3/nav.php', {
 			data: {loc: 'user', who: user}, success: function(d) {
 				if (_.includes(d, 'This user does not seem to exist.'))
-					cb(false, "The user "+user+" doesn't exist.");
+					cb(false, 'The user '+user+" doesn't exist.");
 				else if (_.includes(d, 'You cannot whisper'))
 					cb(false, "You can't whisper "+user+" because you aren't friends with them.");
 				else cb(true);
@@ -174,23 +172,22 @@ destTypes.pm = {
 		return 'PM '+this.user+' - Subject: '+this.subj;
 	},
 	send: function(cb, txt) {
-		var user = this.user;
-		var subj = this.subj;
+		var user = this.user, subj = this.subj;
 		$.ajax('../members/send_pm.php', {
 			type: 'POST', data: {
 				to: user, subject: subj, message: txt.replace(/\\\\/g, '\n'),
 				checktime: microtime(), send: 'Send'
 			}, success: function(d) {
 				if (_.includes(d, 'Your message has been sent succesfully!'))
-					cb(true, "Your PM has been sent to "+user+".");
+					cb(true, 'Your PM has been sent to '+user+'.');
 				else if (_.includes(d, 'You are currently banned'))
 					cb(false, "You can't send PMs while banned.");
-				else if (_.includes(d, " doesn't exist!")) cb(false, "The user "+user+" doesn't exist.");
+				else if (_.includes(d, " doesn't exist!")) cb(false, 'The user '+user+" doesn't exist.");
 				else if (_.includes(d, 'friends can send PMs to'))
 					cb(false, "You can't PM "+user+" because you aren't friends with them.");
-				else cb(false, "An unknown error occurred while sending the PM to "+user+".");
+				else cb(false, 'An unknown error occurred while sending the PM to '+user+'.');
 			}, timeout: 3000, dataType: 'text',
-			error: function() { cb(false, "Plaza+ can't confirm if your PM was sent to "+user+"."); }
+			error: function() { cb(false, "Plaza+ can't confirm if your PM was sent to "+user+'.'); }
 		});
 		setDest({type: 'chat'});
 	},
@@ -200,12 +197,12 @@ destTypes.pm = {
 			type: 'POST', data: {
 				to: user, subject: '', message: '', checktime: microtime(), send: 'Send'
 			}, success: function(d) {
-				if (_.includes(d, " doesn't exist!")) cb(false, "The user "+user+" doesn't exist.");
+				if (_.includes(d, " doesn't exist!")) cb(false, 'The user '+user+" doesn't exist.");
 				else if (_.includes(d, 'friends can send PMs to'))
 					cb(false, "You can't PM "+user+" because you aren't friends with them.");
-				else cb(true, "Type the PM message for "+user+" into the textbox.");
+				else cb(true, 'Type the PM message for '+user+' into the textbox.');
 			}, timeout: 3000, dataType: 'text',
-			error: function() { cb(true, "Type the PM message for "+user+" into the textbox."); }
+			error: function() { cb(true, 'Type the PM message for '+user+' into the textbox.'); }
 		});
 	}
 };
@@ -227,12 +224,12 @@ commands.ignore = function(cb, param) { getUser(param.shift(), function(user) {
 		data: {loc: 'user', who: user}, success: function(d) {
 			var id = d.match(/'\/INTERNAL-ignore (?:\+|-) (\d+)';/);
 			if (_.includes(d, 'This user does not seem to exist.'))
-				chatErr("The user "+user+" doesn't exist.");
+				chatErr('The user '+user+" doesn't exist.");
 			else if (id) sendChat('/INTERNAL-ignore + ' + id[1]);
-			else chatErr("Failed to retrieve "+user+"'s member ID.");
+			else chatErr('Failed to retrieve '+user+"'s member ID.");
 			cb();
 		}, timeout: 3000, dataType: 'text',
-		error: function() { cb(chatErr("Failed to retrieve "+user+"'s member ID.")); }
+		error: function() { cb(chatErr('Failed to retrieve '+user+"'s member ID.")); }
 	});
 }); };
 commands.unignore = function(cb, param) { getUser(param.shift(), function(user) {
@@ -241,37 +238,32 @@ commands.unignore = function(cb, param) { getUser(param.shift(), function(user) 
 		data: {loc: 'user', who: user}, success: function(d) {
 			var id = d.match(/'\/INTERNAL-ignore (?:\+|-) (\d+)';/);
 			if (_.includes(d, 'This user does not seem to exist.'))
-				chatErr("The user "+user+" doesn't exist.");
+				chatErr('The user '+user+" doesn't exist.");
 			else if (id) sendChat('/INTERNAL-ignore - ' + id[1]);
-			else chatErr("Failed to retrieve "+user+"'s member ID.");
+			else chatErr('Failed to retrieve '+user+"'s member ID.");
 			cb();
 		}, timeout: 3000, dataType: 'text',
-		error: function() { chatErr("Failed to retrieve "+user+"'s member ID."); cb(); }
+		error: function() { cb(chatErr('Failed to retrieve '+user+"'s member ID.")); }
 	});
 }); };
 commands.overraeg = aliasCmd('/raeg ' + _.repeat(':)', 20), true);
 commands['+ver'] = function(cb) {
-	var vers = chrome.runtime.getManifest().version;
-	var name = chrome.runtime.getManifest().version_name || vers;
-	var extr = name == vers ? '' : ' ('+vers+')';
-	cb(chatMsg('You are using Plaza+ for Chrome ' + name + extr));
+	var ver = chrome.runtime.getManifest().version_name || chrome.runtime.getManifest().version;
+	cb(chatMsg('You are using Plaza+ '+ver+' (Chrome).'));
 };
 commands.chat = function(cb, param) {
-	var dest = {type: 'chat'};
-	var msg = param.join(' ');
+	var dest = {type: 'chat'}, msg = param.join(' ');
 	if (msg) return parsePost(msg, dest, cb);
 	cb(setDest(dest));
 };
 commands.echo = function(cb, param) {
-	var dest = {type: 'echo'};
-	var msg = param.join(' ');
+	var dest = {type: 'echo'}, msg = param.join(' ');
 	if (msg) return parsePost(msg, dest, cb);
 	cb(setDest(dest));
 };
 commands.whisper = function(cb, param) { getUser(param.shift(), function(user, tag) {
 	if (!user) return cb(chatErr('Please specify a user.'));
-	var dest = {type: 'whisper', tag: tag, user: user};
-	var msg = param.join(' ');
+	var dest = {type: 'whisper', tag: tag, user: user}, msg = param.join(' ');
 	if (msg) return parsePost(msg, dest, cb);
 	cb(setDest(dest));
 }); };
@@ -292,15 +284,14 @@ commands.alias = function(cb, param) {
 			'No aliases are set.'
 		));
 	else if (user) {
-		aliases[name] = {tag: tag, user: user};
-		chatMsg('Alias '+tag+' has been set to '+user+'.');
+		aliases[name] = {tag: tag, user: user}; chatMsg('Alias '+tag+' has been set to '+user+'.');
 	} else if (aliases[name]) {
-		delete aliases[name];
-		chatMsg('Alias '+tag+' has been deleted.');
+		delete aliases[name]; chatMsg('Alias '+tag+' has been deleted.');
 	} else return cb(chatMsg('Alias '+tag+' is not set.'));
-	cb(chrome.storage.sync.set({aliases: aliases}, function() {
+	chrome.storage.sync.set({aliases: aliases}, function() {
 		if (chrome.runtime.lastError) chatErr('Failed to save aliases: ' + chrome.runtime.lastError);
-	}));
+		cb();
+	});
 };
 commands.room = function(cb, param) {
 	var room = param.shift();
@@ -315,14 +306,16 @@ commands.transfer = function(cb, param) {
 	if (!amt) return cb(chatErr('Please specify an amount of points to transfer.'));
 	getUser(param.shift(), function(user) {
 		if (!user) return cb(chatErr('Please specify a user to transfer points to.'));
-		$.ajax('../apps/points_transfer/transfer_process.php', {
+		$.ajax('/apps/points_transfer/transfer_process.php', {
 			type: 'POST', data: {amount: amt, to: user, checktime: microtime()}, success: function(d) {
 				if (_.includes(d, 'You cannot transfer points to yourself!'))
 					cb(chatErr('Are you trying to be greedy? Give those points to someone else!'));
 				else if (_.includes(d, 'The user you entered doesnt exist!'))
 					cb(chatErr('The user '+name+" doesn't exist."));
-				else if (_.includes(d, 'You dont have enough points to transfer!'))
-					cb(chatErr("You're not a wizard. No transferring points you don't have."));
+				else if (
+					_.includes(d, 'You dont have enough points to transfer!') ||
+					_.includes(d, 'bigger than the amount you can transfer!')
+				) cb(chatErr("You're not a wizard. No transferring points you don't have."));
 				else if (_.includes(d, 'You can only send whole points'))
 					cb(chatErr("Points aren't cookies. They must be given whole."));
 				else if (_.includes(d, 'You havent entered the amount to transfer'))

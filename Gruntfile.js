@@ -6,7 +6,7 @@ module.exports = function(grunt) {
 		less: {content: less('content'), util: less('util')},
 		clean: {
 			css: ['content/*.css', 'util/*.css'],
-			manifest: ['manifest.json'], zip:['plazaplus.zip']
+			manifest: ['manifest.json'], zip: ['plazaplus.zip']
 		},
 		compress: {main: {
 			files: [{
@@ -19,13 +19,15 @@ module.exports = function(grunt) {
 			}], options: {archive: 'plazaplus.zip'}
 		}}
 	});
+	
 	grunt.loadNpmTasks('grunt-contrib-less');
 	grunt.loadNpmTasks('grunt-contrib-clean');
 	grunt.loadNpmTasks('grunt-contrib-compress');
 	grunt.registerTask('manifest', 'Creates manifest.json', function() {
-		var json = new Function(grunt.file.read('manifest.js'))();
-		grunt.file.write('manifest.json', JSON.stringify(json));
+		grunt.file.write('manifest.json', JSON.stringify(eval(grunt.file.read('manifest.js'))));
 	});
+	
 	grunt.registerTask('default', ['manifest', 'less']);
-	grunt.registerTask('zip', ['default', 'compress']);
+	grunt.registerTask('rebuild', ['clean', 'default']);
+	grunt.registerTask('zip', ['rebuild', 'compress']);
 };

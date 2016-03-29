@@ -13,12 +13,12 @@ res = res.concat(sounds.split(' ').map(function(n) { return 'sounds/'+n+'.ogg'; 
 util = 'options';
 res = res.concat(util.split(' ').map(function(n) { return 'util/'+n+'.html'; }));
 
-return {
+({
 	manifest_version: 2,
 	name: 'Plaza+',
 	version: '4.5.1',
 	version_name: '4.5.1',
-
+	
 	description: 'Adds several new features and commands to the 3DSPlaza chatrooms.',
 	icons: {128: 'icon.png'},
 	author: 'Fayne Aldan',
@@ -48,4 +48,4 @@ return {
 		}
 	],
 	web_accessible_resources: res
-};
+})
