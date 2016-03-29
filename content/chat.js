@@ -892,4 +892,77 @@ function onlineWrite() {
 }
 new MutationObserver(onlineRead).observe($('#online')[0], {childList: true});
 
+// emoticon picker
+var emoticons = {
+	"Faces": [
+		{"n": ":)", "w": 15, "h": 15, "p": "-1px -17px"},
+		{"n": ":D", "w": 15, "h": 15, "p": "-17px -17px"},
+		{"n": ";)", "w": 15, "h": 15, "p": "-33px -17px"},
+		{"n": ":S", "w": 15, "h": 15, "p": "-49px -17px"},
+		//{"n": ":P", "w": 15, "h": 15, "p": "-65px -17px"},
+		{"n": ":@", "w": 15, "h": 15, "p": "-81px -17px"},
+		{"n": "-_-&apos;", "w": 15, "h": 15, "p": "-40px -53px"},
+		{"n": ":O", "w": 16, "h": 16, "p": "-1px -33px"},
+		{"n": "xD", "w": 16, "h": 16, "p": "-18px -33px"},
+		{"n": ":fp:", "w": 19, "h": 19, "p": "-35px -33px"},
+		{"n": "R:", "w": 16, "h": 16, "p": "-55px -33px"},
+		{"n": "RB:", "w": 16, "h": 16, "p": "-72px -33px"},
+		{"n": "R(", "w": 16, "h": 16, "p": "-89px -33px"},
+		{"n": ":ponything:", "w": 16, "h": 23, "p": "-109px -90px"},
+		{"n": ":dummy:", "w": 21, "h": 16, "p": "-1px -53px"},
+		{"n": ":nuu:", "w": 16, "h": 16, "p": "-23px -53px"}
+	],
+	"Memes": [
+		{"n": ":troll:", "w": 18, "h": 15, "p": "-1px -70px"},
+		{"n": ":lol:", "w": 17, "h": 20, "p": "-20px -70px"},
+		{"n": ":megusta:", "w": 22, "h": 23, "p": "-38px -70px"},
+		{"n": ":no:", "w": 20, "h": 20, "p": "-61px -70px"},
+		{"n": ":raeg:", "w": 20, "h": 20, "p": "-61px -91px"},
+		{"n": ":pface:", "w": 14, "h": 19, "p": "-82px -70px"},
+		{"n": ":falone:", "w": 26, "h": 24, "p": "-82px -90px"},
+		{"n": ":ohplz:", "w": 17, "h": 19, "p": "-1px -94px"},
+		{"n": ":ydsay:", "w": 20, "h": 16, "p": "-19px -94px"},
+		{"n": ":doge:", "w": 20, "h": 20, "p": "-97px -69px"}
+	],
+	"Other": [
+		{"n": "@<3@", "w": 15, "h": 13, "p": "-61px -114px"},
+		{"n": ":yoshi:", "w": 16, "h": 16, "p": "-1px -114px"},
+		{"n": ":msonic:", "w": 16, "h": 16, "p": "-18px -114px"},
+		{"n": ":pball:", "w": 14, "h": 15, "p": "-35px -114px"},
+		{"n": ":file:", "w": 10, "h": 14, "p": "-50px -114px"},
+		{"n": "//to do", "w": 16, "h": 16, "p": "-77px -114px"},
+		{"n": ":cake:", "w": 15, "h": 15, "p": "-94px -115px"},
+		{"n": ":mario:", "w": 15, "h": 15, "p": "-110px -115px"},
+		{"n": ":luigi:", "w": 15, "h": 14, "p": "-126px -116px"},
+		{"n": ":ds:", "w": 15, "h": 15, "p": "-1px -131px"},
+		{"n": ":burger:", "w": 15, "h": 15, "p": "-17px -130px"},
+		{"n": ":taco:", "w": 15, "h": 15, "p": "-33px -130px"},
+		{"n": ":icecream:", "w": 15, "h": 15, "p": "-49px -130px"},
+	]
+};
+
+$("body").append([
+	$('<div id="plus-emoticonPicker"></div>'),
+	$('<div id="plus-emoticonPickerBtn"></div>')
+]);
+
+$("#plus-emoticonPickerBtn").click(function(){
+	$("#plus-emoticonPicker, #plus-emoticonPickerBtn").toggleClass("active");
+});
+
+for(var cat in emoticons){
+	$("#plus-emoticonPicker").append($("<hr title='"+cat+"'>"));
+
+	for(var emo in emoticons[cat])
+		$("#plus-emoticonPicker").append($("<span data-emoticon='"+emoticons[cat][emo].n+"' style='background-position:"+emoticons[cat][emo].p+";width:"+emoticons[cat][emo].w+"px;height:"+emoticons[cat][emo].h+"px'></span>"));
+}
+
+$("#plus-emoticonPicker span").each(function(){
+	$(this).click(function(){
+		$("#bericht").val($("#bericht").val() + $(this).data("emoticon")).focus();
+	});
+});
+
+console.log("fuck");
+
 chatMsg('Welcome to Plaza+! Type /+help for help with Plaza+.');

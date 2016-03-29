@@ -34,3 +34,108 @@ form input[name=color] { width: 130px; }
 	width: 100% !important;
 	.onlinehead { text-align: center; cursor: pointer; font-weight: bold; }
 }
+
+
+#plus-emoticonPickerBtn, #plus-imgurBtn {
+	position: absolute;
+	bottom: 11px;
+	right: 100px;
+	z-index: 1;
+	background: url(http://i.imgur.com/6ubCX8h.png);
+	background-position: -1px -1px;
+	width: 15px;
+	height: 15px;
+	cursor: pointer;
+	z-index: 50;
+}
+
+#plus-emoticonPickerBtn:hover {
+	background-position: -17px -1px;
+}
+
+#plus-emoticonPickerBtn.active {
+	background-position: -33px -1px;
+}
+
+#plus-emoticonPicker {
+	position: absolute;
+	z-index: 1;
+	bottom: 42px;
+	right: 30px;
+	width: 150px;
+	height: auto;
+	background: #ffffff;
+	border: 2px solid #aaa;
+	border-radius: 5px;
+	text-align: center;
+	-webkit-user-select: none;
+	moz-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	opacity: 0;
+	transition: all .5s;
+}
+
+#plus-emoticonPicker.active {
+	pointer-events: initial;
+	bottom: 32px;
+	opacity: 1;
+}
+
+#plus-emoticonPicker:after, #plus-emoticonPicker:before {
+	top: 100%;
+	left: 50%;
+	border: solid transparent;
+	content: " ";
+	height: 0;
+	width: 0;
+	position: absolute;
+	pointer-events: none;
+}
+
+#plus-emoticonPicker:after {
+	border-color: rgba(255, 255, 255, 0);
+	border-top-color: #ffffff;
+	border-width: 5px;
+	margin-left: -5px;
+}
+
+#plus-emoticonPicker:before {
+	border-color: rgba(170, 170, 170, 0);
+	border-top-color: #aaa;
+	border-width: 8px;
+	margin-left: -8px;
+}
+
+#plus-emoticonPicker div {
+	font-size: 12px;
+}
+
+#plus-emoticonPicker span {
+	display: inline-block;
+	background: url(http://i.imgur.com/6ubCX8h.png);
+	margin: 1px;
+	cursor: pointer;
+	transition: transform .1s ease-in, -webkit-filter .25s;
+}
+
+#plus-emoticonPicker span:hover {
+	-webkit-filter: brightness(1.5);
+	filter: brightness(1.5);
+}
+
+#plus-emoticonPicker span:active {
+	transform: scale(2.5);
+}
+
+#plus-emoticonPicker > hr {
+	border: 0;
+	height: 1px;
+	background: rgb(197, 197, 197);
+	margin: 2px 0;
+}
+
+#plus-emoticonPicker > hr:first-of-type {
+	visibility: hidden;
+	margin: 2px 0 0 0;
+}
