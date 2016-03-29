@@ -436,6 +436,16 @@ commands.r = commands.reply;
 commands.help = function(cb) {
 	cb(chatMsg("Sorry. 3DSPlaza lied to you. That command doesn't exist. :("));
 };
+// Get your mind out of the gutter! It's short for Study room PERMissions!
+// And no, this was not intentional. XD
+commands.sperm = function(cb, param) {
+	if (!_.startsWith(chatroom, 'v3study')) return cb(chatErr('You are not in a study room.'));
+	var cmd = param.shift();
+	if (cmd == 'scan') return cb('/minipbatch scan chat.use.'+chatroom);
+	else if (cmd == 'grant' || cmd == 'revoke' || cmd == 'test')
+		return cb('/minipbatch '+cmd+' chat.use.'+chatroom+' '+param.join(' '));
+	else return cb(chatErr('Invalid command.'));
+};
 
 function setDest(d) {
 	if (!_.isNil(d)) {
@@ -881,16 +891,5 @@ function onlineWrite() {
 	onlineCache = $('#online').html();
 }
 new MutationObserver(onlineRead).observe($('#online')[0], {childList: true});
-
-if ($('#overrideWarning').length) {
-	console.log('Saving the world from imminent destruction! Wait. Only Plaza+ is being saved...');
-	$('#overrideWarning').html('Once again, the day is saved thanks to...! Plaza+...<br>');
-	// ffs olivier...
-	lockAsync(); $('#bericht').attr('id', 'betemp').removeAttr('maxlength');
-	$('<input>', {id: 'bericht'}).appendTo('body');
-	document.addEventListener('plusStudy', _.once(function() {
-		$('#bericht').remove(); $('#betemp').attr('id', 'bericht'); freeAsync();
-	}));
-}
 
 chatMsg('Welcome to Plaza+! Type /+help for help with Plaza+.');
