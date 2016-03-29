@@ -939,8 +939,8 @@ var emoticons = {
 };
 
 $('body').append(
-	$('<div id="plus-emoticonPicker"></div>'),
-	$('<div id="plus-emoticonPickerBtn"></div>')
+	$('<div/>', {id: 'plus-emoticonPicker'}),
+	$('<div/>', {id: 'plus-emoticonPickerBtn'})
 );
 
 $('#plus-emoticonPickerBtn').click(function() {
