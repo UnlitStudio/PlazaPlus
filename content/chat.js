@@ -963,62 +963,50 @@ _.each(emoticons, function(emotes, cat) {
 	});
 });
 
-$('#plus-emoticonPicker span').click(function() {
-	appendToTextbox($(this).data('emoticon'));
-});
+$('#plus-emoticonPicker span').click(function() { appendToTextbox($(this).data('emoticon')); });
 
 // imgur uploader
 $('body').append(
-	$('<input/>', {id: 'plus-imgurUploadInput', type: 'file', style: 'display: none'}),
-	$('<div/>', {id: 'plus-imgurUploadBtn'}).click(function(){
-		$("#plus-imgurUploadInput").click();
+	$('<input/>', {id: 'plus-imgurUploadInput', type: 'file'}).hide(),
+	$('<div/>', {id: 'plus-imgurUploadBtn'}).click(function() {
+		$('#plus-imgurUploadInput').click();
 	})
 );
 
 function uploadToImgur(file) {
-	var fd = new FormData();
-	fd.append('image', file);
-
-	var xhr = $.ajax({
-		url: "https://api.imgur.com/3/image.json",
-		type: "POST",
-		data: fd,
-		processData: false,
-		contentType: false,
-		headers: {'Authorization': 'Client-ID 0609f1f5d0e4a2b'},
-		timeout: 60000,
-		dataType: 'json',
+	var fd = new FormData(); fd.append('image', file);
+	var xhr = $.ajax('https://api.imgur.com/3/image.json', {
+		type: 'POST', data: fd, processData: false, contentType: false,
+		headers: {Authorization: 'Client-ID 0609f1f5d0e4a2b'}, dataType: 'json',
 		xhr: function() {
 			// trick to get the progress event in jQuery ajax
 			var xhr = new window.XMLHttpRequest();
-			xhr.upload.addEventListener("progress", function(evt) {
-				$("#plus_imgurUploadingBarPercentage").css('width', Math.round(evt.loaded / evt.total * 100) + '%');
+			xhr.upload.addEventListener('progress', function(evt) {
+				$('#plus_imgurUploadingBarPercentage').css('width', Math.round(evt.loaded / evt.total * 100) + '%');
 			}, false);
-
 			return xhr;
 		},
 		success: function(resp) {
-			if(resp.success === false) {
-				var err = resp.data ? "\n\"" + resp.data.error + "\"" : "";
-				return alert("An error occured while uploading to Imgur." + err);
-			}
-
-			appendToTextbox(resp.data.link);
+			if (!resp.success) {
+				var err = resp.data ? '\n"' + resp.data.error + '"' : '';
+				chatErr('An error occured while uploading to Imgur: ' + err);
+			} else appendToTextbox(resp.data.link);
 		},
-		error: function() {
-			return alert("An error occured while uploading to Imgur.");
+		error: function(xhr, stat) {
+			if (stat == 'abort') return;
+			chatErr('An unknown error occured while uploading to Imgur.');
 		},
 		complete: function() {
-			$("#plus-imgurUploadInput").val('');
-			$("#plus_imgurUploading").fadeOut(400, function() {
-				$(this).remove();
-			});
+			$('#plus-imgurUploadInput').val('');
+			$('#plus_imgurUploading').fadeOut(400, function() { $(this).remove(); });
 		}
 	});
 
 	$('body').append(
 		$('<div/>', {id: 'plus_imgurUploading', text: 'Uploading to Imgur...'}).append(
-			$('<div/>', {id: 'plus_imgurUploadingBar'}).append($('<div/>', {id: 'plus_imgurUploadingBarPercentage'})),
+			$('<div/>', {id: 'plus_imgurUploadingBar'}).html(
+				$('<div/>', {id: 'plus_imgurUploadingBarPercentage'})
+			),
 			$('<div/>', {id: 'plus_imgurCancelUpload', text: 'Cancel'}).click(function() {
 				xhr.abort();
 			})
@@ -1026,20 +1014,13 @@ function uploadToImgur(file) {
 	);
 }
 
-$("#plus-imgurUploadInput").change(function() {
-	uploadToImgur($(this)[0].files[0]);
-});
+$('#plus-imgurUploadInput').change(function() { uploadToImgur($(this)[0].files[0]); });
 
 $(document).on('paste', function(evt) {
-	var items = (evt.clipboardData || evt.originalEvent.clipboardData).items;
-	var blob = null;
-	_.each(items, function(item) {
-		if (item.type.indexOf("image") === 0) {
-			blob = item.getAsFile();
-		}
-	});
+	var items = (evt.clipboardData || evt.originalEvent.clipboardData).items, blob = null;
+	_.each(items, function(item) { if (_.startsWith(item.type, 'image')) blob = item.getAsFile(); });
 
-	if (blob !== null) {
+	if (blob) {
 		var reader = new FileReader();
 		reader.onload = function() {
 			uploadToImgur(reader.result.replace(/^data:image\/(png|jpg);base64,/, ""));

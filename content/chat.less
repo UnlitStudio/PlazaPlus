@@ -27,7 +27,11 @@
 }
 form input[name=color] { width: 130px; }
 .plusicon { &:not([src]), &[src=""] { display: none; } }
-.plazaplus { #morepane iframe { height: 73% !important; } }
+/* In case Plaza+ can't load. */
+.plazaplus {
+	#bericht { padding-right: 35px; }
+	#morepane iframe { height: 73% !important; }
+}
 #morepane iframe { width: 171px !important; }
 .demo { word-wrap: break-word; }
 .online {
@@ -36,9 +40,12 @@ form input[name=color] { width: 130px; }
 }
 
 #plus-emoticonPickerBtn, #plus-imgurUploadBtn {
-	position: absolute; bottom: 11px; right: 100px; width: 15px; height: 15px;
-	background: url(http://i.imgur.com/6ubCX8h.png); background-position: -1px -1px;
-	cursor: pointer; z-index: 50;
+	position: absolute; bottom: 11px; width: 15px; height: 15px; cursor: pointer; z-index: 50;
+	background: url(http://i.imgur.com/6ubCX8h.png);
+}
+
+#plus-emoticonPickerBtn {
+	right: 100px; background-position: -1px -1px;
 	&:hover { background-position: -17px -1px; }
 	&.active { background-position: -33px -1px; }
 }
@@ -81,8 +88,7 @@ form input[name=color] { width: 130px; }
 #plus_imgurUploading {
 	display: flex; position: fixed; width: 100%; height: 100%; z-index: 99999;
 	background: rgba(0,0,0,.5); color: #FFFFFF; text-shadow: 0 6px rgba(0,0,0,.2);
-	font-family: sans-serif; font-size: 72px;
-	justify-content: center; align-items: center;
+	font-family: sans-serif; font-size: 72px; justify-content: center; align-items: center;
 }
 
 #plus_imgurUploadingBar {
@@ -91,8 +97,7 @@ form input[name=color] { width: 130px; }
 }
 
 #plus_imgurUploadingBarPercentage {
-	width: 0; height: 15px;
-	background: #9575CD; transition: width 2s;
+	width: 0; height: 15px; background: #9575CD; transition: width 2s;
 }
 
 #plus_imgurCancelUpload {
