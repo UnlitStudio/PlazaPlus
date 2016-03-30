@@ -893,6 +893,13 @@ function onlineWrite() {
 new MutationObserver(onlineRead).observe($('#online')[0], {childList: true});
 
 // emoticon picker
+function appendToTextbox(text){
+	var be = $('#bericht')[0], start = be.selectionStart, end = be.selectionEnd;
+	var txt = $('#bericht').val(), range = start + text.length;
+	$('#bericht').val(txt.substring(0, start) + text + txt.substr(end)).focus();
+	be.setSelectionRange(range, range, 'none');
+}
+
 var emoticons = {
 	Faces: [
 		{n: ':)', w: 15, h: 15, p: '-1px -17px'},
@@ -956,11 +963,70 @@ _.each(emoticons, function(emotes, cat) {
 	});
 });
 
-$('#plus-emoticonPicker span').click(function() {
-	var be = $('#bericht')[0], start = be.selectionStart, end = be.selectionEnd;
-	var txt = $('#bericht').val(), range = start + $(this).data('emoticon').length;
-	$('#bericht').val(txt.substring(0, start) + $(this).data('emoticon') + txt.substr(end)).focus();
-	be.setSelectionRange(range, range, 'none');
+$('#plus-emoticonPicker span').click(function() { appendToTextbox($(this).data('emoticon')); });
+
+// imgur uploader
+$('body').append(
+	$('<input/>', {id: 'plus-imgurUploadInput', type: 'file'}).hide(),
+	$('<div/>', {id: 'plus-imgurUploadBtn'}).click(function() {
+		$('#plus-imgurUploadInput').click();
+	})
+);
+
+function uploadToImgur(file) {
+	var fd = new FormData(); fd.append('image', file);
+	var xhr = $.ajax('https://api.imgur.com/3/image.json', {
+		type: 'POST', data: fd, processData: false, contentType: false,
+		headers: {Authorization: 'Client-ID 0609f1f5d0e4a2b'}, dataType: 'json',
+		xhr: function() {
+			// trick to get the progress event in jQuery ajax
+			var xhr = new window.XMLHttpRequest();
+			xhr.upload.addEventListener('progress', function(evt) {
+				$('#plus_imgurUploadingBarPercentage').css('width', Math.round(evt.loaded / evt.total * 100) + '%');
+			}, false);
+			return xhr;
+		},
+		success: function(resp) {
+			if (!resp.success) {
+				var err = resp.data ? '\n"' + resp.data.error + '"' : '';
+				chatErr('An error occured while uploading to Imgur: ' + err);
+			} else appendToTextbox(resp.data.link);
+		},
+		error: function(xhr, stat) {
+			if (stat == 'abort') return;
+			chatErr('An unknown error occured while uploading to Imgur.');
+		},
+		complete: function() {
+			$('#plus-imgurUploadInput').val('');
+			$('#plus_imgurUploading').fadeOut(400, function() { $(this).remove(); });
+		}
+	});
+
+	$('body').append(
+		$('<div/>', {id: 'plus_imgurUploading', text: 'Uploading to Imgur...'}).append(
+			$('<div/>', {id: 'plus_imgurUploadingBar'}).html(
+				$('<div/>', {id: 'plus_imgurUploadingBarPercentage'})
+			),
+			$('<div/>', {id: 'plus_imgurCancelUpload', text: 'Cancel'}).click(function() {
+				xhr.abort();
+			})
+		)
+	);
+}
+
+$('#plus-imgurUploadInput').change(function() { uploadToImgur($(this)[0].files[0]); });
+
+$(document).on('paste', function(evt) {
+	var items = (evt.clipboardData || evt.originalEvent.clipboardData).items, blob = null;
+	_.each(items, function(item) { if (_.startsWith(item.type, 'image')) blob = item.getAsFile(); });
+
+	if (blob) {
+		var reader = new FileReader();
+		reader.onload = function() {
+			uploadToImgur(reader.result.replace(/^data:image\/(png|jpg);base64,/, ""));
+		};
+		reader.readAsDataURL(blob);
+	}
 });
 
 chatMsg('Welcome to Plaza+! Type /+help for help with Plaza+.');

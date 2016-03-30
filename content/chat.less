@@ -27,7 +27,11 @@
 }
 form input[name=color] { width: 130px; }
 .plusicon { &:not([src]), &[src=""] { display: none; } }
-.plazaplus { #morepane iframe { height: 73% !important; } }
+/* In case Plaza+ can't load. */
+.plazaplus {
+	#bericht { padding-right: 35px; }
+	#morepane iframe { height: 73% !important; }
+}
 #morepane iframe { width: 171px !important; }
 .demo { word-wrap: break-word; }
 .online {
@@ -35,10 +39,13 @@ form input[name=color] { width: 130px; }
 	.onlinehead { text-align: center; cursor: pointer; font-weight: bold; }
 }
 
+#plus-emoticonPickerBtn, #plus-imgurUploadBtn {
+	position: absolute; bottom: 11px; width: 15px; height: 15px; cursor: pointer; z-index: 50;
+	background: url(http://i.imgur.com/6ubCX8h.png);
+}
+
 #plus-emoticonPickerBtn {
-	position: absolute; bottom: 11px; right: 100px; width: 15px; height: 15px;
-	background: url(http://i.imgur.com/6ubCX8h.png); background-position: -1px -1px;
-	cursor: pointer; z-index: 50;
+	right: 100px; background-position: -1px -1px;
 	&:hover { background-position: -17px -1px; }
 	&.active { background-position: -33px -1px; }
 }
@@ -71,4 +78,30 @@ form input[name=color] { width: 130px; }
 		border: 0; height: 1px; background: rgb(197, 197, 197); margin: 2px 0;
 		&:first-of-type { visibility: hidden; margin: 2px 0 0 0; }
 	}
+}
+
+#plus-imgurUploadBtn {
+	right: 117px; background-position: -49px -1px;
+	&:hover { background-position: -65px -1px; }
+}
+
+#plus_imgurUploading {
+	display: flex; position: fixed; width: 100%; height: 100%; z-index: 99999;
+	background: rgba(0,0,0,.5); color: #FFFFFF; text-shadow: 0 6px rgba(0,0,0,.2);
+	font-family: sans-serif; font-size: 72px; justify-content: center; align-items: center;
+}
+
+#plus_imgurUploadingBar {
+	position: absolute; left: 0; right: 0; width: 40%; height: 15px; margin: 10px auto;
+	background: #fff; box-shadow: 0 5px rgba(0,0,0,.2);
+}
+
+#plus_imgurUploadingBarPercentage {
+	width: 0; height: 15px; background: #9575CD; transition: width 2s;
+}
+
+#plus_imgurCancelUpload {
+	position: absolute; left: 0; right: 0; width: 70px; margin: 40px auto; padding: 5px;
+	border: solid 2px; border-radius: 5px;
+	font-size: 18px; text-shadow: none; text-align: center; cursor: pointer;
 }
