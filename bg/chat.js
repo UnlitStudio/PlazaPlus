@@ -79,6 +79,6 @@ function getChat(v) {
 		case 'v3rp': return 'Roleplay';
 		case 'v3rpaux': return 'Aux Roleplay';
 		case 'r9k': return 'ROBOT9000';
-		default: return '[Unknown]';
+		default: return v;
 	}
 }
