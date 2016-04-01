@@ -180,17 +180,4 @@ $('#resetYes').click(function() {
 	$('#resetConfirm').html('<td class="center">Please wait...</td>');
 	chrome.storage.sync.clear(function() { location.reload(); });
 });
-$('#iconGrant').click(function() {
-	chrome.permissions.request({origins: ['http://188.166.72.241/']}, function(granted) {
-		if (!granted) return; $('#iconGranted').show(); $('#iconWarning').hide();
-	});
-});
-$('#iconDeny').click(function() {
-	chrome.permissions.remove({origins: ['http://188.166.72.241/']}, function(removed) {
-		if (!removed) return; $('#iconWarning').show(); $('#iconGranted').hide();
-	});
-});
-chrome.permissions.contains({origins: ['http://188.166.72.241/']}, function(result) {
-	if (result) $('#iconWarning').hide(); else $('#iconGranted').hide();
-});
 });

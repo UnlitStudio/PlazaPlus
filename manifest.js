@@ -23,10 +23,9 @@ res = res.concat(util.split(' ').map(function(n) { return 'util/'+n+'.html'; }))
 	icons: {128: 'icon.png'},
 	author: 'Fayne Aldan',
 	permissions: [
-		'storage', 'notifications', 'alarms',
+		'storage', 'notifications', 'alarms', 'http://188.166.72.241/',
 		'http://3dsplaza.com/', 'http://pc.3dsplaza.com/'
 	],
-	optional_permissions: ['http://188.166.72.241/'],
 	options_ui: {
 		page: 'util/options.html',
 		chrome_style: true
