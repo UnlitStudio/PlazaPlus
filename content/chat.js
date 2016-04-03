@@ -738,7 +738,7 @@ var chatRead = _.throttle(function() {
 			nregex = '(' + _.join(nregex, '|') + ')';
 			nregex = nregex != "()" ? msg.match(new RegExp(nregex, 'i')) : false;
 			name = user ? _.toLower(user) : false;
-			var fayman = (name == 'fayne_aldan' || name == 'erman') && (whisper == 'you' || !whisper);
+			var fay = name == 'fayne_aldan' && (whisper == 'you' || !whisper);
 			if (whisper == 'you' && user && !whisp) whisp = user;
 			if (idCheck > chatCheck) {
 				if (enc)
@@ -747,7 +747,7 @@ var chatRead = _.throttle(function() {
 					}, 0);
 				if (mainTab && chatCache) {
 					if (idCheck == -1) {} // Don't notify.
-					else if (fayman && _.includes(msg, '!+check')) (function() {
+					else if (fay && _.includes(msg, '!+check')) (function() {
 						var vers = chrome.runtime.getManifest().version;
 						var name = chrome.runtime.getManifest().version_name || vers;
 						var extr = name == vers ? '' : ' ('+vers+')';
