@@ -464,6 +464,7 @@ function setDest(d) {
 	} else {
 		var type = destTypes[dests[active].type] || {info:_.constant('Invalid destination')};
 		$('#bericht').attr('placeholder', _.bind(type.info, dests[active]));
+		$('#plusbtn'+active).attr('title', _.bind(type.info, dests[active]));
 	}
 }
 
@@ -697,11 +698,11 @@ $('#bericht').attr({'onkeypress': null}).keydown(function(e) {
 	if (csp[1]) $('#bericht')[0].setSelectionRange(csp[2] + 12, csp[2] + 12);
 });
 $('<div/>', {'class': 'plusbtn', id: 'plusopt'}).click(function() { sendMessage('openOptions'); })
-	.append($('<div/>')).appendTo('#plusbar');
+	.append($('<div/>')).attr('title', 'Plaza+ Options').appendTo('#plusbar');
 _.times(5, function(n) {
 	dests[n] = {type: 'chat', text: '', selection: [0, 0, 'forward']};
 	$('<div/>', {'class': 'plusbtn', id: 'plusbtn'+n}).click(function() { setActive(n); })
-		.append($('<div/>')).appendTo('#plusbar');
+		.append($('<div/>')).attr('title', 'Chat').appendTo('#plusbar');
 });
 setActive(0);
 
