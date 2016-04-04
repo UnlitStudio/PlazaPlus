@@ -1,4 +1,20 @@
-/* globals _, chrome, Enums */
+/* globals chrome */
+var Enums = require('./enums.js');
+var $ = require('jquery');
+var _ = {
+	startsWith: require('lodash/startsWith'),
+	rest: require('lodash/rest'),
+	concat: require('lodash/concat'),
+	includes: require('lodash/includes'),
+	map: require('lodash/map'),
+	split: require('lodash/split'),
+	toLower: require('lodash/toLower'),
+	head: require('lodash/head'),
+	tail: require('lodash/tail'),
+	spread: require('lodash/spread'),
+	without: require('lodash/without')
+};
+var getChat = require('./func/getChatName.js');
 
 var chatTabs = {list: {}, main: {}};
 
@@ -51,7 +67,7 @@ chrome.runtime.onConnect.addListener(function(port) {
 					}, timeout: 5000, dataType: 'text', cache: false
 				});
 			});
-			var a = new Audio(); a.src = chrome.extension.getURL('sounds/'+items.notifySound);
+			var a = new Audio(); a.src = chrome.extension.getURL('res/'+items.notifySound);
 			a.volume = items.notifyVolume / 100; a.play();
 		});
 	};
@@ -69,16 +85,20 @@ chrome.runtime.onConnect.addListener(function(port) {
 	});
 });
 
-function getChat(v) {
-	switch (_.toLower(v)) {
-		case 'v3original': return 'Original';
-		case 'v3game': return 'Game';
-		case 'v3red': return 'Red';
-		case 'v3yellow': return 'Yellow';
-		case 'v3green': return 'Green';
-		case 'v3rp': return 'Roleplay';
-		case 'v3rpaux': return 'Aux Roleplay';
-		case 'r9k': return 'ROBOT9000';
-		default: return v;
-	}
-}
+chrome.alarms.onAlarm.addListener(function(alarm) {
+	if (alarm.name != 'icons') return;
+	chrome.storage.local.get({iconCache: Enums.localDef.iconCache}, function(items) {
+		var rev = items.iconCache.Revision;
+		$.ajax('http://188.166.72.241/services/plaza+/rev.php', {
+			success: function(data) {
+				if (data != rev) $.ajax('http://188.166.72.241/services/plaza+/icons.json', {
+					success: function(icons) {
+						if (icons.Revision) chrome.storage.local.set({iconCache: icons});
+					}, timeout: 10000, dataType: 'json', cache: false
+				});
+			}, timeout: 10000, dataType: 'text', cache: false
+		});
+		});
+});
+// Instantly executes if unpacked. Otherwise, executes after 1 minute.
+chrome.alarms.create('icons', {when: Date.now(), periodInMinutes: 3});

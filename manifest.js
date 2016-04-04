@@ -1,17 +1,11 @@
-function bg(n) { return 'bg/'+n+'.js'; }
-function lib(n) { return 'lib/'+n+'.js'; }
-function content(n) { return 'content/'+n+'.js'; }
-function enums() { return lib('Enums'); }
-function jquery() { return lib('jquery'); }
-function lodash() { return lib('lodash'); }
-function color() { return lib('tinycolor'); }
+function js(v) { return 'dist/'+v+'.js'; }
 
-res = [content('chatInject')];
-sounds = 'capisci come-to-daddy communication-channel credulous et-voila gets-in-the-way isnt-it';
-sounds += ' pedantic solemn you-know';
-res = res.concat(sounds.split(' ').map(function(n) { return 'sounds/'+n+'.ogg'; }));
-util = 'options';
-res = res.concat(util.split(' ').map(function(n) { return 'util/'+n+'.html'; }));
+res = ['res/chatInject.js'];
+sounds = [
+	'capisci', 'come-to-daddy', 'communication-channel', 'credulous', 'et-voila', 'gets-in-the-way',
+	'isnt-it', 'pedantic', 'solemn', 'you-know'
+]
+res = res.concat(sounds.map(function(n) { return 'res/'+n+'.ogg'; }));
 
 ({
 	manifest_version: 2,
@@ -30,20 +24,14 @@ res = res.concat(util.split(' ').map(function(n) { return 'util/'+n+'.html'; }))
 		page: 'util/options.html',
 		chrome_style: true
 	},
-	background: {
-		scripts: [enums(), jquery(), lodash(), bg('chat'), bg('icons')]
-	},
+	background: {scripts: [js('bg')]},
 	content_scripts: [
 		{
 			matches: ['http://pc.3dsplaza.com/chat3/innerchat.php*'],
-			js: [enums(), jquery(), lodash(), color(), lib('Autolinker'), content('chat')],
-			css: ['content/chat.css'],
-			all_frames: true
+			js: [js('chat')], all_frames: true
 		}, {
 			matches: ['http://pc.3dsplaza.com/chat3/nav.php*'],
-			js: [jquery(), content('chatNav')],
-			css: ['content/chatNav.css'],
-			all_frames: true
+			js: [js('chatNav')], all_frames: true
 		}
 	],
 	web_accessible_resources: res

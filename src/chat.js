@@ -1,4 +1,64 @@
-/* globals _, $, chrome, Autolinker, Enums, tinycolor */
+/* globals chrome */
+
+require('./chat.less');
+
+var Enums = require('./enums.js');
+var $ = require('jquery');
+var _ = {
+	rest: require('lodash/rest'),
+	concat: require('lodash/concat'),
+	isString: require('lodash/isString'),
+	now: require('lodash/now'),
+	spread: require('lodash/spread'),
+	head: require('lodash/head'),
+	noop: require('lodash/noop'),
+	tail: require('lodash/tail'),
+	each: require('lodash/each'),
+	toLower: require('lodash/toLower'),
+	times: require('lodash/times'),
+	includes: require('lodash/includes'),
+	repeat: require('lodash/repeat'),
+	map: require('lodash/map'),
+	template: require('lodash/template'),
+	sample: require('lodash/sample'),
+	split: require('lodash/split'),
+	compact: require('lodash/compact'),
+	indexOf: require('lodash/indexOf'),
+	startsWith: require('lodash/startsWith'),
+	isNil: require('lodash/isNil'),
+	bind: require('lodash/bind'),
+	constant: require('lodash/constant'),
+	join: require('lodash/join'),
+	initial: require('lodash/initial'),
+	last: require('lodash/last'),
+	escape: require('lodash/escape'),
+	toLower: require('lodash/toLower'),
+	unescape: require('lodash/unescape'),
+	clamp: require('lodash/clamp'),
+	memoize: require('lodash/memoize'),
+	reduce: require('lodash/reduce'),
+	trim: require('lodash/trim'),
+	cond: require('lodash/cond'),
+	concat: require('lodash/concat'),
+	rearg: require('lodash/rearg'),
+	partial: require('lodash/partial'),
+	toNumber: require('lodash/toNumber'),
+	isNaN: require('lodash/isNaN'),
+	eq: require('lodash/eq'),
+	uniqueId: require('lodash/uniqueId'),
+	zip: require('lodash/zip'),
+	split: require('lodash/split'),
+	throttle: require('lodash/throttle'),
+	take: require('lodash/take'),
+	escapeRegExp: require('lodash/escapeRegExp'),
+	compact: require('lodash/compact'),
+	split: require('lodash/split'),
+	groupBy: require('lodash/groupBy')
+};
+_.partial.placeholder = _;
+var Promise = require('promise');
+var Autolinker = require('autolinker');
+var tinycolor = require('tinycolor2');
 
 var chatIns = _.rest(function(objs) {
 	$('#demo').prepend(_.concat(objs, '<br>', '<!--d-->'));
@@ -45,7 +105,7 @@ var colorBanned = '#ff0000', colorIgnored = '#000000';
 var oldsp;
 (function() {
 	var s = document.createElement('script');
-	s.src = chrome.extension.getURL('content/chatInject.js');
+	s.src = chrome.extension.getURL('res/chatInject.js');
 	s.onload = function() { $(this).remove(); };
 	document.body.appendChild(s);
 	var evt = document.createEvent('Event');
@@ -248,7 +308,7 @@ commands.unignore = function(cb, param) { getUser(param.shift(), function(user) 
 }); };
 commands.overraeg = aliasCmd('/raeg ' + _.repeat(':)', 20), true);
 commands['+ver'] = function(cb) {
-	var ver = chrome.runtime.getManifest().version_name || chrome.runtime.getManifest().version;
+	var ver = chrome.runtime.getManifest().version_name;
 	cb(chatMsg('You are using Plaza+ '+ver+' (Chrome).'));
 };
 commands.chat = function(cb, param) {
@@ -334,7 +394,7 @@ commands.transfer = function(cb, param) {
 	});
 };
 commands.slap = function(cb, param) {
-	var item = _('fish,gym sock,skunk,diaper,cheese wedge').split(',').sample();
+	var item = _.sample(['fish','gym sock','skunk','diaper','cheese wedge']);
 	cb('/me slaps '+param.join(' ')+' with a smelly '+item+'.');
 };
 commands.rptag = function(cb, param) {
@@ -359,9 +419,8 @@ commands.rptag = function(cb, param) {
 		});
 };
 commands.focus = function(cb, param) {
-	var focused = [], blurred = [], action = param.shift(), locks = 1;
+	var focused = [], blurred = [], action = param.shift();
 	function icb() {
-		locks = locks - 1; if (locks > 0) return;
 		$('#pluscss2').text((function() { switch (focusMode) {
 			case 'blur': return '.blur{filter:blur(1px);-webkit-filter:blur(1px)}.blur:hover{filter:initial;-webkit-filter:initial}';
 			case 'shrink':
@@ -393,17 +452,17 @@ commands.focus = function(cb, param) {
 			focusMode = action;
 			return icb();
 	}
-	param.unshift(action); param = _.compact(param); locks = param.length;
-	_.each(param, function(user) {
-		getUser(user, function(user, tag) {
-			if (!user) return icb();
-			var index = _(focusList).map(_.toLower).indexOf(_.toLower(user));
-			if (index == -1) { focusList.push(user); focused.push(user); }
-			else { focusList.splice(index, 1); blurred.push(user); }
-			icb();
+	param.unshift(action); param = _.compact(param);
+	if (param.length)
+		getUsers(param).then(function(users) {
+			_.each(users, function(user) {
+				if (!user) return;
+				var index = _.indexOf(_.map(focusList, _.toLower), _.toLower(user));
+				if (index == -1) { focusList.push(user); focused.push(user); }
+				else { focusList.splice(index, 1); blurred.push(user); }
+			}); icb();
 		});
-	});
-	if (locks === 0) {
+	else {
 		if (focusList.length == 1) cb(chatMsg(focusList[0] + ' is currently focused.'));
 		else if (focusList.length > 1) cb(chatMsg(oxford(focusList) + ' are currently focused.'));
 		else cb(chatMsg('No users are currently focused.'));
@@ -412,7 +471,7 @@ commands.focus = function(cb, param) {
 commands['+help'] = function(cb, param) { cb(sendMessage('openHelp', param.shift())); };
 commands.cspl = function(cb, param) {
 	var cmd = param.shift();
-	if (cmd != 'steal') return cb('/cspl '+cmd+' '+param.join(' '));
+	if (cmd != 'steal' && cmd != 'stealhsv') return cb('/cspl '+cmd+' '+param.join(' '));
 	getUser(param.shift(), function(user) {
 		if (!user) return cb(chatErr('Please specify a user.'));
 		getUser('Me', function(me, meh) {
@@ -422,7 +481,8 @@ commands.cspl = function(cb, param) {
 				if (_.includes(you, '=')) return cb(chatErr('Please specify your username.'));
 				var usr = onlineList[_.toLower(user)];
 				if (!usr) return cb(chatErr("Couldn't find "+user+' on the online list.'));
-				$('#bericht').val('/cspl conf ' + (parseCspl(you + '=' + usr.cspl.join('/')))[0]);
+				you = you + '='; if (cmd == 'stealhsv') you = you + 'hsv:';
+				$('#bericht').val('/cspl conf ' + (parseCspl(you + usr.cspl.join('/')))[0]);
 				cb();
 			});
 		});
@@ -439,19 +499,34 @@ commands.help = function(cb) {
 // Get your mind out of the gutter! It's short for Study room PERMissions!
 // And no, this was not intentional. XD
 commands.sperm = function(cb, param) {
-	if (!_.startsWith(chatroom, 'v3study')) return cb(chatErr('You are not in a study room.'));
-	var cmd = param.shift();
-	if (cmd == 'scan') return cb('/minipbatch scan chat.use.'+chatroom);
-	else if (cmd == 'grant' || cmd == 'revoke' || cmd == 'test')
-		return cb('/minipbatch '+cmd+' chat.use.'+chatroom+' '+param.join(' '));
-	else return cb(chatErr('Invalid command.'));
+	var cm = param.shift(), cmd = false;
+	if (cm == 'scan' || cm == 'list') cmd = 'scan';
+	else if (cm == 'grant' || cm == 'allow' || cm == '+') cmd = 'grant';
+	else if (cm == 'revoke' || cm == 'deny' || cm == '-') cmd = 'revoke';
+	else if (cm == 'test' || cm == 'check') cmd = 'test';
+	if (!cmd) return cb(chatErr('Invalid command.'));
+	var room = param.shift();
+	if (!room) {
+		if (!_.startsWith(chatroom, 'v3study')) return cb(chatErr('Please specify a study room.'));
+		room = chatroom.substr(7);
+	}
+	if (cmd == 'scan') cb('/minipbatch scan chat.use.v3study'+room);
+	else getUsers(param).then(function(users) {
+		cb('/minipbatch '+cmd+' chat.use.v3study'+room+' '+users.join(' '));
+	});
 };
 
+function getUsers(users) {
+	return Promise.all(_.map(users, function(u) {
+		return new Promise(function(ok) { getUser(u, function(user) { ok(user); }); });
+	}));
+}
+
 function setDest(d) {
-	if (!_.isNil(d)) {
+	if (d) {
 		lockAsync();
 		_.bind(destTypes[d.type].usable, d)(function(stat, info) {
-			if (!_.isNil(info)) {
+			if (info) {
 				if (stat) chatMsg(info); else chatErr(info);
 			}
 			if (stat) {
@@ -462,7 +537,7 @@ function setDest(d) {
 			freeAsync();
 		});
 	} else {
-		var type = destTypes[dests[active].type] || {info:_.constant('Invalid destination')};
+		var type = destTypes[dests[active].type] || {info: _.constant('Invalid destination')};
 		$('#bericht').attr('placeholder', _.bind(type.info, dests[active]));
 		$('#plusbtn'+active).attr('title', _.bind(type.info, dests[active]));
 	}
@@ -571,12 +646,12 @@ function sp() {
 			}
 		};
 		_.bind(type.usable, dest)(function(stat, info) {
-			if (!_.isNil(info)) {
+			if (info) {
 				if (stat) chatMsg(info); else chatErr(info);
 			}
 			if (stat)
 				_.bind(type.send, dest)(function(stat, info) {
-					if (!_.isNil(info)) {
+					if (info) {
 						if (stat) chatMsg(info); else chatErr(info);
 					}
 					freeAsync();
@@ -586,89 +661,10 @@ function sp() {
 	});
 }
 
-function colorLerp(t, cols, hsv) {
-	var c = cols.length - 1; t = t * c; if (c === 0) return cols[0];
-	var i = _.clamp(Math.floor(t), 0, c-1); t = t - i;
-	var s = cols[i], e = cols[i+1], lerp = function(s,e) { return (1-t)*s+t*e; };
-	if (hsv) {
-		s = s.toHsv(); e = e.toHsv();
-		return tinycolor({h: lerp(s.h, e.h), s: lerp(s.s, e.s), v: lerp(s.v, e.v)});
-	} else {
-		s = s.toRgb(); e = e.toRgb();
-		return tinycolor({r: lerp(s.r, e.r), g: lerp(s.g, e.g), b: lerp(s.b, e.b)});
-	}
-}
-
-var parseColor = _.memoize(function(col) {
-	var filts = col.split(';'); col = filts.shift();
-	col = /^\s*rand(om)?\s*$/i.exec(col) ? tinycolor.random() : tinycolor(col);
-	if (!col.isValid()) return false;
-	return _(filts).map(function(v) { return _.trim(_.toLower(v)); }).reduce(_.cond(
-		_('lighten brighten darken desaturate saturate spin').split(' ').map(function(t) {
-			return [
-				_.rearg(_.partial(_.startsWith, _, t), 1),
-				function(c, f) {
-					var s = t == 'spin', d = s ? 0 : 10, n = _.toNumber(f.substr(t.length) || d);
-					return c[t](_.isNaN(n) ? d : _.clamp(n, s ? -360 : 0, s ? 360 : 100));
-				}
-			];
-		}).concat([
-			[
-				function(c, f) { return /^gr[ae]y(scale)?$/.exec(f); },
-				function(c) { return c.greyscale(); }
-			], [_.constant(true), _.constant(false)]
-		]).unshift([_.partial(_.eq, _, false), _.constant(false)]).value()
-	), col);
-}, function(col) { return /^\s*rand(om)?\s*(;|$)/i.exec(col) ? _.uniqueId() : '>'+col; });
-
-function parseSeg(len, str) {
-	var kw = _.trim(_.toLower(str)), hsv = true;
-	if (kw == 'rainbow') str = 'hsv:red/violet';
-	else hsv = _.startsWith(kw, 'hsv:');
-	if (_.startsWith(kw, 'rgb:') || hsv) str = str.substr(4);
-	var cols = _.map(str.split('/'), parseColor);
-	return _.times(len, function(i) { return colorLerp(i/(len-1), cols, hsv).toHexString(); });
-}
-
-function parseCspl(str, loc) {
-	var colors = [], segs = str.split(' '), ret = -1, rloc = 0;
-	try {
-		_.each(segs, function(seg) {
-			var r = /^([A-Za-z0-9_\-~().]+)=(.*)$/.exec(seg), n = colors.length - 1;
-			if (r) colors.push([r[1], r[2]]);
-			else if (n < 0) throw false;
-			else colors[n][1] = colors[n][1] + ' ' + seg;
-			if (rloc > -1) {
-				if (rloc >= loc) { loc = ret; rloc = -1; }
-				else {
-					rloc = rloc + 1 + seg.length;
-					if (r) ret = ret + r[1].length;
-				}
-			}
-		});
-		segs = []; ret = []; rloc = -1;
-		_.each(colors, function(part) {
-			var seg = part[0], str = part[1];
-			segs = _.concat(segs, _.zip(_.split(seg, ''), parseSeg(seg.length, str)));
-		});
-	} catch (e) { if (e === false) return [str, false, str.length]; else throw e; }
-	_.each(segs, function(seg) {
-		var n = ret.length - 1;
-		if (n < 0) ret.push(seg);
-		else if (seg[1] == ret[n][1]) {
-			ret[n] = [ret[n][0]+seg[0], seg[1]];
-			loc = loc - 1;
-		} else ret.push(seg);
-	});
-	ret = _.map(ret, function(v) {
-		v = v[0] + '=' + v[1];
-		if (loc > -1) {
-			rloc = rloc + 1 + v.length; loc = loc - 1;
-		}
-		return v;
-	}).join(' ');
-	return [ret, true, rloc];
-}
+var colorLerp = require('./func/colorLerp.js');
+var parseColor = require('./func/parseColor.js');
+var parseSeg = require('./func/parseSeg.js');
+var parseCspl = require('./func/parseCspl.js');
 
 $('#send').attr({'onclick': null}).click(function() { sp(); });
 $('#bericht').attr({'onkeypress': null}).keydown(function(e) {
@@ -748,10 +744,8 @@ var chatRead = _.throttle(function() {
 				if (mainTab && chatCache) {
 					if (idCheck == -1) {} // Don't notify.
 					else if (fay && _.includes(msg, '!+check')) (function() {
-						var vers = chrome.runtime.getManifest().version;
-						var name = chrome.runtime.getManifest().version_name || vers;
-						var extr = name == vers ? '' : ' ('+vers+')';
-						sendChat('/whisperto '+user+' Plaza+ for Chrome ' + name + extr, true);
+						var vers = chrome.runtime.getManifest().version_name;
+						sendChat('/whisperto '+user+' Plaza+ ' + vers + ' (Chrome)', true);
 					})();
 					else if (whisper == 'you' && notifyWhispers)
 						sendMessage('notify', 'whisper', {user: user, msg: msg, warn: warnCheck});
@@ -790,7 +784,7 @@ var onlineRead = _.throttle(function() {
 	onlineTimer = window.setInterval(onlineUpd, 1000);
 	if (html.match(/Warning:/)) online = onlineList;
 	else
-		_(brarray).initial().each(function(v) {
+		_.each(_.initial(brarray), function(v) {
 			var rank = v.match(/background-color: ([a-z]+);/);
 			if (rank)	rank = (function(){ switch (rank[1]) {
 				case 'cyan': return 'noob';
@@ -958,13 +952,11 @@ $('#plus-emoticonPickerBtn').click(function() {
 _.each(emoticons, function(emotes, cat) {
 	$('#plus-emoticonPicker').append($('<hr>', {title: cat}));
 	_.each(emotes, function(emote) {
-		$("#plus-emoticonPicker").append($('<span/>', {'data-emoticon': emote.n, css: {
+		$("#plus-emoticonPicker").append($('<span/>', {css: {
 				backgroundPosition: emote.p, width: emote.w, height: emote.h
-		}}));
+		}}).click(function() { appendToTextbox(emote.n); }).attr('title', emote.n));
 	});
 });
-
-$('#plus-emoticonPicker span').click(function() { appendToTextbox($(this).data('emoticon')); });
 
 // imgur uploader
 $('body').append(
