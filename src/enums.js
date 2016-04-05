@@ -1,4 +1,4 @@
-var Enums = {
+module.exports = {
 	localDef: {
 		iconCache: { Revision: 0 }
 	},

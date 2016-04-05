@@ -1,4 +1,64 @@
-/* globals _, $, chrome, Autolinker, Enums, tinycolor */
+/* globals chrome */
+
+require('./chat.less');
+
+var Enums = require('./enums.js');
+var $ = require('jquery');
+var _ = {
+	rest: require('lodash/rest'),
+	concat: require('lodash/concat'),
+	isString: require('lodash/isString'),
+	now: require('lodash/now'),
+	spread: require('lodash/spread'),
+	head: require('lodash/head'),
+	noop: require('lodash/noop'),
+	tail: require('lodash/tail'),
+	each: require('lodash/each'),
+	toLower: require('lodash/toLower'),
+	times: require('lodash/times'),
+	includes: require('lodash/includes'),
+	repeat: require('lodash/repeat'),
+	map: require('lodash/map'),
+	template: require('lodash/template'),
+	sample: require('lodash/sample'),
+	split: require('lodash/split'),
+	compact: require('lodash/compact'),
+	indexOf: require('lodash/indexOf'),
+	startsWith: require('lodash/startsWith'),
+	isNil: require('lodash/isNil'),
+	bind: require('lodash/bind'),
+	constant: require('lodash/constant'),
+	join: require('lodash/join'),
+	initial: require('lodash/initial'),
+	last: require('lodash/last'),
+	escape: require('lodash/escape'),
+	toLower: require('lodash/toLower'),
+	unescape: require('lodash/unescape'),
+	clamp: require('lodash/clamp'),
+	memoize: require('lodash/memoize'),
+	reduce: require('lodash/reduce'),
+	trim: require('lodash/trim'),
+	cond: require('lodash/cond'),
+	concat: require('lodash/concat'),
+	rearg: require('lodash/rearg'),
+	partial: require('lodash/partial'),
+	toNumber: require('lodash/toNumber'),
+	isNaN: require('lodash/isNaN'),
+	eq: require('lodash/eq'),
+	uniqueId: require('lodash/uniqueId'),
+	zip: require('lodash/zip'),
+	split: require('lodash/split'),
+	throttle: require('lodash/throttle'),
+	take: require('lodash/take'),
+	escapeRegExp: require('lodash/escapeRegExp'),
+	compact: require('lodash/compact'),
+	split: require('lodash/split'),
+	groupBy: require('lodash/groupBy')
+};
+_.partial.placeholder = _;
+var Promise = require('promise');
+var Autolinker = require('autolinker');
+var tinycolor = require('tinycolor2');
 
 var chatIns = _.rest(function(objs) {
 	$('#demo').prepend(_.concat(objs, '<br>', '<!--d-->'));
@@ -34,8 +94,8 @@ function microtime() {
 
 var chatroom = /\?room=(.*)/.exec($('.contain_inside form').attr('action'));
 chatroom = chatroom ? chatroom[1] : 'v3original';
-var port = chrome.runtime.connect({name: 'chat:'+chatroom});
-var mainTab = false, active = 0, dests = {}, icons = {}, aliases = {}, focusList = [];
+var port = chrome.runtime.connect({name: 'chat:'+chatroom}), mainTab = false;
+var active = 0, dests = {}, icons = {}, aliases = {}, focusList = [], isFocus = false;
 var focusMode = 'blur', asyncLock = 0, notifyNames = '', notifyWhispers = false, lastWhisp = false;
 var onlineSort = false, colorNormal = '#0000ff', colorNoob = '#00ffff', colorMod = '#00ff00';
 var colorBanned = '#ff0000', colorIgnored = '#000000';
@@ -45,9 +105,9 @@ var colorBanned = '#ff0000', colorIgnored = '#000000';
 var oldsp;
 (function() {
 	var s = document.createElement('script');
-	s.src = chrome.extension.getURL('content/chatInject.js');
-	s.onload = function() { this.parentNode.removeChild(this); };
-	(document.head || document.documentElement).appendChild(s);
+	s.src = chrome.extension.getURL('res/chatInject.js');
+	s.onload = function() { $(this).remove(); };
+	document.body.appendChild(s);
 	var evt = document.createEvent('Event');
 	evt.initEvent('plusSendChat', true, false);
 	oldsp = function() { document.dispatchEvent(evt); };
@@ -141,15 +201,13 @@ destTypes.whisper = {
 			return 'Whisper '+this.tag+' ('+this.user+')';
 		return 'Whisper '+this.user;
 	},
-	send: function(cb, txt) {
-		sendChat('/whisperto '+this.user+' '+txt, true); cb(true);
-	},
+	send: function(cb, txt) { sendChat('/whisperto '+this.user+' '+txt, true); cb(true); },
 	usable: function(cb) {
 		var user = this.user;
 		$.ajax('../chat3/nav.php', {
 			data: {loc: 'user', who: user}, success: function(d) {
 				if (_.includes(d, 'This user does not seem to exist.'))
-					cb(false, "The user "+user+" doesn't exist.");
+					cb(false, 'The user '+user+" doesn't exist.");
 				else if (_.includes(d, 'You cannot whisper'))
 					cb(false, "You can't whisper "+user+" because you aren't friends with them.");
 				else cb(true);
@@ -174,23 +232,22 @@ destTypes.pm = {
 		return 'PM '+this.user+' - Subject: '+this.subj;
 	},
 	send: function(cb, txt) {
-		var user = this.user;
-		var subj = this.subj;
+		var user = this.user, subj = this.subj;
 		$.ajax('../members/send_pm.php', {
 			type: 'POST', data: {
 				to: user, subject: subj, message: txt.replace(/\\\\/g, '\n'),
 				checktime: microtime(), send: 'Send'
 			}, success: function(d) {
 				if (_.includes(d, 'Your message has been sent succesfully!'))
-					cb(true, "Your PM has been sent to "+user+".");
+					cb(true, 'Your PM has been sent to '+user+'.');
 				else if (_.includes(d, 'You are currently banned'))
 					cb(false, "You can't send PMs while banned.");
-				else if (_.includes(d, " doesn't exist!")) cb(false, "The user "+user+" doesn't exist.");
+				else if (_.includes(d, " doesn't exist!")) cb(false, 'The user '+user+" doesn't exist.");
 				else if (_.includes(d, 'friends can send PMs to'))
 					cb(false, "You can't PM "+user+" because you aren't friends with them.");
-				else cb(false, "An unknown error occurred while sending the PM to "+user+".");
+				else cb(false, 'An unknown error occurred while sending the PM to '+user+'.');
 			}, timeout: 3000, dataType: 'text',
-			error: function(cb) { cb(false, "Plaza+ can't confirm if your PM was sent to "+user+"."); }
+			error: function() { cb(false, "Plaza+ can't confirm if your PM was sent to "+user+'.'); }
 		});
 		setDest({type: 'chat'});
 	},
@@ -200,12 +257,12 @@ destTypes.pm = {
 			type: 'POST', data: {
 				to: user, subject: '', message: '', checktime: microtime(), send: 'Send'
 			}, success: function(d) {
-				if (_.includes(d, " doesn't exist!")) cb(false, "The user "+user+" doesn't exist.");
+				if (_.includes(d, " doesn't exist!")) cb(false, 'The user '+user+" doesn't exist.");
 				else if (_.includes(d, 'friends can send PMs to'))
 					cb(false, "You can't PM "+user+" because you aren't friends with them.");
-				else cb(true, "Type the PM message for "+user+" into the textbox.");
+				else cb(true, 'Type the PM message for '+user+' into the textbox.');
 			}, timeout: 3000, dataType: 'text',
-			error: function() { cb(true, "Type the PM message for "+user+" into the textbox."); }
+			error: function() { cb(true, 'Type the PM message for '+user+' into the textbox.'); }
 		});
 	}
 };
@@ -227,12 +284,12 @@ commands.ignore = function(cb, param) { getUser(param.shift(), function(user) {
 		data: {loc: 'user', who: user}, success: function(d) {
 			var id = d.match(/'\/INTERNAL-ignore (?:\+|-) (\d+)';/);
 			if (_.includes(d, 'This user does not seem to exist.'))
-				chatErr("The user "+user+" doesn't exist.");
+				chatErr('The user '+user+" doesn't exist.");
 			else if (id) sendChat('/INTERNAL-ignore + ' + id[1]);
-			else chatErr("Failed to retrieve "+user+"'s member ID.");
+			else chatErr('Failed to retrieve '+user+"'s member ID.");
 			cb();
 		}, timeout: 3000, dataType: 'text',
-		error: function() { cb(chatErr("Failed to retrieve "+user+"'s member ID.")); }
+		error: function() { cb(chatErr('Failed to retrieve '+user+"'s member ID.")); }
 	});
 }); };
 commands.unignore = function(cb, param) { getUser(param.shift(), function(user) {
@@ -241,37 +298,32 @@ commands.unignore = function(cb, param) { getUser(param.shift(), function(user) 
 		data: {loc: 'user', who: user}, success: function(d) {
 			var id = d.match(/'\/INTERNAL-ignore (?:\+|-) (\d+)';/);
 			if (_.includes(d, 'This user does not seem to exist.'))
-				chatErr("The user "+user+" doesn't exist.");
+				chatErr('The user '+user+" doesn't exist.");
 			else if (id) sendChat('/INTERNAL-ignore - ' + id[1]);
-			else chatErr("Failed to retrieve "+user+"'s member ID.");
+			else chatErr('Failed to retrieve '+user+"'s member ID.");
 			cb();
 		}, timeout: 3000, dataType: 'text',
-		error: function() { chatErr("Failed to retrieve "+user+"'s member ID."); cb(); }
+		error: function() { cb(chatErr('Failed to retrieve '+user+"'s member ID.")); }
 	});
 }); };
 commands.overraeg = aliasCmd('/raeg ' + _.repeat(':)', 20), true);
 commands['+ver'] = function(cb) {
-	var vers = chrome.runtime.getManifest().version;
-	var name = chrome.runtime.getManifest().version_name || vers;
-	var extr = name == vers ? '' : ' ('+vers+')';
-	cb(chatMsg('You are using Plaza+ for Chrome ' + name + extr));
+	var ver = chrome.runtime.getManifest().version_name;
+	cb(chatMsg('You are using Plaza+ '+ver+' (Chrome).'));
 };
 commands.chat = function(cb, param) {
-	var dest = {type: 'chat'};
-	var msg = param.join(' ');
+	var dest = {type: 'chat'}, msg = param.join(' ');
 	if (msg) return parsePost(msg, dest, cb);
 	cb(setDest(dest));
 };
 commands.echo = function(cb, param) {
-	var dest = {type: 'echo'};
-	var msg = param.join(' ');
+	var dest = {type: 'echo'}, msg = param.join(' ');
 	if (msg) return parsePost(msg, dest, cb);
 	cb(setDest(dest));
 };
 commands.whisper = function(cb, param) { getUser(param.shift(), function(user, tag) {
 	if (!user) return cb(chatErr('Please specify a user.'));
-	var dest = {type: 'whisper', tag: tag, user: user};
-	var msg = param.join(' ');
+	var dest = {type: 'whisper', tag: tag, user: user}, msg = param.join(' ');
 	if (msg) return parsePost(msg, dest, cb);
 	cb(setDest(dest));
 }); };
@@ -292,15 +344,14 @@ commands.alias = function(cb, param) {
 			'No aliases are set.'
 		));
 	else if (user) {
-		aliases[name] = {tag: tag, user: user};
-		chatMsg('Alias '+tag+' has been set to '+user+'.');
+		aliases[name] = {tag: tag, user: user}; chatMsg('Alias '+tag+' has been set to '+user+'.');
 	} else if (aliases[name]) {
-		delete aliases[name];
-		chatMsg('Alias '+tag+' has been deleted.');
+		delete aliases[name]; chatMsg('Alias '+tag+' has been deleted.');
 	} else return cb(chatMsg('Alias '+tag+' is not set.'));
-	cb(chrome.storage.sync.set({aliases: aliases}, function() {
+	chrome.storage.sync.set({aliases: aliases}, function() {
 		if (chrome.runtime.lastError) chatErr('Failed to save aliases: ' + chrome.runtime.lastError);
-	}));
+		cb();
+	});
 };
 commands.room = function(cb, param) {
 	var room = param.shift();
@@ -315,14 +366,16 @@ commands.transfer = function(cb, param) {
 	if (!amt) return cb(chatErr('Please specify an amount of points to transfer.'));
 	getUser(param.shift(), function(user) {
 		if (!user) return cb(chatErr('Please specify a user to transfer points to.'));
-		$.ajax('../apps/points_transfer/transfer_process.php', {
+		$.ajax('/apps/points_transfer/transfer_process.php', {
 			type: 'POST', data: {amount: amt, to: user, checktime: microtime()}, success: function(d) {
 				if (_.includes(d, 'You cannot transfer points to yourself!'))
 					cb(chatErr('Are you trying to be greedy? Give those points to someone else!'));
 				else if (_.includes(d, 'The user you entered doesnt exist!'))
 					cb(chatErr('The user '+name+" doesn't exist."));
-				else if (_.includes(d, 'You dont have enough points to transfer!'))
-					cb(chatErr("You're not a wizard. No transferring points you don't have."));
+				else if (
+					_.includes(d, 'You dont have enough points to transfer!') ||
+					_.includes(d, 'bigger than the amount you can transfer!')
+				) cb(chatErr("You're not a wizard. No transferring points you don't have."));
 				else if (_.includes(d, 'You can only send whole points'))
 					cb(chatErr("Points aren't cookies. They must be given whole."));
 				else if (_.includes(d, 'You havent entered the amount to transfer'))
@@ -341,7 +394,7 @@ commands.transfer = function(cb, param) {
 	});
 };
 commands.slap = function(cb, param) {
-	var item = _('fish,gym sock,skunk,diaper,cheese wedge').split(',').sample();
+	var item = _.sample(['fish','gym sock','skunk','diaper','cheese wedge']);
 	cb('/me slaps '+param.join(' ')+' with a smelly '+item+'.');
 };
 commands.rptag = function(cb, param) {
@@ -366,9 +419,8 @@ commands.rptag = function(cb, param) {
 		});
 };
 commands.focus = function(cb, param) {
-	var focused = [], blurred = [], action = param.shift(), locks = 1;
+	var focused = [], blurred = [], action = param.shift();
 	function icb() {
-		locks = locks - 1; if (locks > 0) return;
 		$('#pluscss2').text((function() { switch (focusMode) {
 			case 'blur': return '.blur{filter:blur(1px);-webkit-filter:blur(1px)}.blur:hover{filter:initial;-webkit-filter:initial}';
 			case 'shrink':
@@ -400,17 +452,17 @@ commands.focus = function(cb, param) {
 			focusMode = action;
 			return icb();
 	}
-	param.unshift(action); param = _.compact(param); locks = param.length;
-	_.each(param, function(user) {
-		getUser(user, function(user, tag) {
-			if (!user) return icb();
-			var index = _(focusList).map(_.toLower).indexOf(_.toLower(user));
-			if (index == -1) { focusList.push(user); focused.push(user); }
-			else { focusList.splice(index, 1); blurred.push(user); }
-			icb();
+	param.unshift(action); param = _.compact(param);
+	if (param.length)
+		getUsers(param).then(function(users) {
+			_.each(users, function(user) {
+				if (!user) return;
+				var index = _.indexOf(_.map(focusList, _.toLower), _.toLower(user));
+				if (index == -1) { focusList.push(user); focused.push(user); }
+				else { focusList.splice(index, 1); blurred.push(user); }
+			}); icb();
 		});
-	});
-	if (locks === 0) {
+	else {
 		if (focusList.length == 1) cb(chatMsg(focusList[0] + ' is currently focused.'));
 		else if (focusList.length > 1) cb(chatMsg(oxford(focusList) + ' are currently focused.'));
 		else cb(chatMsg('No users are currently focused.'));
@@ -419,7 +471,7 @@ commands.focus = function(cb, param) {
 commands['+help'] = function(cb, param) { cb(sendMessage('openHelp', param.shift())); };
 commands.cspl = function(cb, param) {
 	var cmd = param.shift();
-	if (cmd != 'steal') return cb('/cspl '+cmd+' '+param.join(' '));
+	if (cmd != 'steal' && cmd != 'stealhsv') return cb('/cspl '+cmd+' '+param.join(' '));
 	getUser(param.shift(), function(user) {
 		if (!user) return cb(chatErr('Please specify a user.'));
 		getUser('Me', function(me, meh) {
@@ -429,7 +481,8 @@ commands.cspl = function(cb, param) {
 				if (_.includes(you, '=')) return cb(chatErr('Please specify your username.'));
 				var usr = onlineList[_.toLower(user)];
 				if (!usr) return cb(chatErr("Couldn't find "+user+' on the online list.'));
-				$('#bericht').val('/cspl conf ' + (parseCspl(you + '=' + usr.cspl.join('/')))[0]);
+				you = you + '='; if (cmd == 'stealhsv') you = you + 'hsv:';
+				$('#bericht').val('/cspl conf ' + (parseCspl(you + usr.cspl.join('/')))[0]);
 				cb();
 			});
 		});
@@ -443,12 +496,37 @@ commands.r = commands.reply;
 commands.help = function(cb) {
 	cb(chatMsg("Sorry. 3DSPlaza lied to you. That command doesn't exist. :("));
 };
+// Get your mind out of the gutter! It's short for Study room PERMissions!
+// And no, this was not intentional. XD
+commands.sperm = function(cb, param) {
+	var cm = param.shift(), cmd = false;
+	if (cm == 'scan' || cm == 'list') cmd = 'scan';
+	else if (cm == 'grant' || cm == 'allow' || cm == '+') cmd = 'grant';
+	else if (cm == 'revoke' || cm == 'deny' || cm == '-') cmd = 'revoke';
+	else if (cm == 'test' || cm == 'check') cmd = 'test';
+	if (!cmd) return cb(chatErr('Invalid command.'));
+	var room = param.shift();
+	if (!room) {
+		if (!_.startsWith(chatroom, 'v3study')) return cb(chatErr('Please specify a study room.'));
+		room = chatroom.substr(7);
+	}
+	if (cmd == 'scan') cb('/minipbatch scan chat.use.v3study'+room);
+	else getUsers(param).then(function(users) {
+		cb('/minipbatch '+cmd+' chat.use.v3study'+room+' '+users.join(' '));
+	});
+};
+
+function getUsers(users) {
+	return Promise.all(_.map(users, function(u) {
+		return new Promise(function(ok) { getUser(u, function(user) { ok(user); }); });
+	}));
+}
 
 function setDest(d) {
-	if (!_.isNil(d)) {
+	if (d) {
 		lockAsync();
 		_.bind(destTypes[d.type].usable, d)(function(stat, info) {
-			if (!_.isNil(info)) {
+			if (info) {
 				if (stat) chatMsg(info); else chatErr(info);
 			}
 			if (stat) {
@@ -459,8 +537,9 @@ function setDest(d) {
 			freeAsync();
 		});
 	} else {
-		var type = destTypes[dests[active].type] || {info:_.constant('Invalid destination')};
+		var type = destTypes[dests[active].type] || {info: _.constant('Invalid destination')};
 		$('#bericht').attr('placeholder', _.bind(type.info, dests[active]));
+		$('#plusbtn'+active).attr('title', _.bind(type.info, dests[active]));
 	}
 }
 
@@ -533,6 +612,7 @@ function stripHTML(v) {
 
 function lockAsync() {
 	asyncLock = asyncLock + 1;
+	if (asyncLock == 1) isFocus = $('#bericht').is(':focus');
 	$('#bericht').val(''); $('#bericht').attr('disabled', true);
 	$('#bericht').attr('placeholder', 'Please wait...');
 }
@@ -540,8 +620,8 @@ function lockAsync() {
 function freeAsync() {
 	asyncLock = Math.max(asyncLock - 1, 0);
 	if (asyncLock > 0) return;
-	$('#bericht').attr('disabled', false);
-	$('#bericht').focus(); setDest();
+	$('#bericht').attr('disabled', false); setDest();
+	if (isFocus) $('#bericht').focus();
 }
 
 function parsePost(txt, dest, cb) {
@@ -566,12 +646,12 @@ function sp() {
 			}
 		};
 		_.bind(type.usable, dest)(function(stat, info) {
-			if (!_.isNil(info)) {
+			if (info) {
 				if (stat) chatMsg(info); else chatErr(info);
 			}
 			if (stat)
 				_.bind(type.send, dest)(function(stat, info) {
-					if (!_.isNil(info)) {
+					if (info) {
 						if (stat) chatMsg(info); else chatErr(info);
 					}
 					freeAsync();
@@ -581,89 +661,10 @@ function sp() {
 	});
 }
 
-function colorLerp(t, cols, hsv) {
-	var c = cols.length - 1; t = t * c; if (c === 0) return cols[0];
-	var i = _.clamp(Math.floor(t), 0, c-1); t = t - i;
-	var s = cols[i], e = cols[i+1], lerp = function(s,e) { return (1-t)*s+t*e; };
-	if (hsv) {
-		s = s.toHsv(); e = e.toHsv();
-		return tinycolor({h: lerp(s.h, e.h), s: lerp(s.s, e.s), v: lerp(s.v, e.v)});
-	} else {
-		s = s.toRgb(); e = e.toRgb();
-		return tinycolor({r: lerp(s.r, e.r), g: lerp(s.g, e.g), b: lerp(s.b, e.b)});
-	}
-}
-
-var parseColor = _.memoize(function(col) {
-	var filts = col.split(';'); col = filts.shift();
-	col = /^\s*rand(om)?\s*$/i.exec(col) ? tinycolor.random() : tinycolor(col);
-	if (!col.isValid()) return false;
-	return _(filts).map(function(v) { return _.trim(_.toLower(v)); }).reduce(_.cond(
-		_('lighten brighten darken desaturate saturate spin').split(' ').map(function(t) {
-			return [
-				_.rearg(_.partial(_.startsWith, _, t), 1),
-				function(c, f) {
-					var s = t == 'spin', d = s ? 0 : 10, n = _.toNumber(f.substr(t.length) || d);
-					return c[t](_.isNaN(n) ? d : _.clamp(n, s ? -360 : 0, s ? 360 : 100));
-				}
-			];
-		}).concat([
-			[
-				function(c, f) { return /^gr[ae]y(scale)?$/.exec(f); },
-				function(c) { return c.greyscale(); }
-			], [_.constant(true), _.constant(false)]
-		]).unshift([_.partial(_.eq, _, false), _.constant(false)]).value()
-	), col);
-}, function(col) { return /^\s*rand(om)?\s*(;|$)/i.exec(col) ? _.uniqueId() : '>'+col; });
-
-function parseSeg(len, str) {
-	var kw = _.trim(_.toLower(str)), hsv = true;
-	if (kw == 'rainbow') str = 'hsv:red/violet';
-	else hsv = _.startsWith(kw, 'hsv:');
-	if (_.startsWith(kw, 'rgb:') || hsv) str = str.substr(4);
-	var cols = _.map(str.split('/'), parseColor);
-	return _.times(len, function(i) { return colorLerp(i/(len-1), cols, hsv).toHexString(); });
-}
-
-function parseCspl(str, loc) {
-	var colors = [], segs = str.split(' '), ret = -1, rloc = 0;
-	try {
-		_.each(segs, function(seg) {
-			var r = /^([A-Za-z0-9_\-~().]+)=(.*)$/.exec(seg), n = colors.length - 1;
-			if (r) colors.push([r[1], r[2]]);
-			else if (n < 0) throw false;
-			else colors[n][1] = colors[n][1] + ' ' + seg;
-			if (rloc > -1) {
-				if (rloc >= loc) { loc = ret; rloc = -1; }
-				else {
-					rloc = rloc + 1 + seg.length;
-					if (r) ret = ret + r[1].length;
-				}
-			}
-		});
-		segs = []; ret = []; rloc = -1;
-		_.each(colors, function(part) {
-			var seg = part[0], str = part[1];
-			segs = _.concat(segs, _.zip(_.split(seg, ''), parseSeg(seg.length, str)));
-		});
-	} catch (e) { if (e === false) return [str, false, str.length]; else throw e; }
-	_.each(segs, function(seg) {
-		var n = ret.length - 1;
-		if (n < 0) ret.push(seg);
-		else if (seg[1] == ret[n][1]) {
-			ret[n] = [ret[n][0]+seg[0], seg[1]];
-			loc = loc - 1;
-		} else ret.push(seg);
-	});
-	ret = _.map(ret, function(v) {
-		v = v[0] + '=' + v[1];
-		if (loc > -1) {
-			rloc = rloc + 1 + v.length; loc = loc - 1;
-		}
-		return v;
-	}).join(' ');
-	return [ret, true, rloc];
-}
+var colorLerp = require('./func/colorLerp.js');
+var parseColor = require('./func/parseColor.js');
+var parseSeg = require('./func/parseSeg.js');
+var parseCspl = require('./func/parseCspl.js');
 
 $('#send').attr({'onclick': null}).click(function() { sp(); });
 $('#bericht').attr({'onkeypress': null}).keydown(function(e) {
@@ -693,11 +694,11 @@ $('#bericht').attr({'onkeypress': null}).keydown(function(e) {
 	if (csp[1]) $('#bericht')[0].setSelectionRange(csp[2] + 12, csp[2] + 12);
 });
 $('<div/>', {'class': 'plusbtn', id: 'plusopt'}).click(function() { sendMessage('openOptions'); })
-	.append($('<div/>')).appendTo('#plusbar');
+	.append($('<div/>')).attr('title', 'Plaza+ Options').appendTo('#plusbar');
 _.times(5, function(n) {
 	dests[n] = {type: 'chat', text: '', selection: [0, 0, 'forward']};
 	$('<div/>', {'class': 'plusbtn', id: 'plusbtn'+n}).click(function() { setActive(n); })
-		.append($('<div/>')).appendTo('#plusbar');
+		.append($('<div/>')).attr('title', 'Chat').appendTo('#plusbar');
 });
 setActive(0);
 
@@ -733,7 +734,7 @@ var chatRead = _.throttle(function() {
 			nregex = '(' + _.join(nregex, '|') + ')';
 			nregex = nregex != "()" ? msg.match(new RegExp(nregex, 'i')) : false;
 			name = user ? _.toLower(user) : false;
-			var fayman = (name == 'fayne_aldan' || name == 'erman') && (whisper == 'you' || !whisper);
+			var fay = name == 'fayne_aldan' && (whisper == 'you' || !whisper);
 			if (whisper == 'you' && user && !whisp) whisp = user;
 			if (idCheck > chatCheck) {
 				if (enc)
@@ -742,11 +743,9 @@ var chatRead = _.throttle(function() {
 					}, 0);
 				if (mainTab && chatCache) {
 					if (idCheck == -1) {} // Don't notify.
-					else if (fayman && _.includes(msg, '!+check')) (function() {
-						var vers = chrome.runtime.getManifest().version;
-						var name = chrome.runtime.getManifest().version_name || vers;
-						var extr = name == vers ? '' : ' ('+vers+')';
-						sendChat('/whisperto '+user+' Plaza+ for Chrome ' + name + extr, true);
+					else if (fay && _.includes(msg, '!+check')) (function() {
+						var vers = chrome.runtime.getManifest().version_name;
+						sendChat('/whisperto '+user+' Plaza+ ' + vers + ' (Chrome)', true);
 					})();
 					else if (whisper == 'you' && notifyWhispers)
 						sendMessage('notify', 'whisper', {user: user, msg: msg, warn: warnCheck});
@@ -762,10 +761,11 @@ var chatRead = _.throttle(function() {
 				v = '<!--plused--><span class="'+b+'" user="'+name+'"><img '+i+'> '+v+'</span>';
 			} else v = '<!--plused-->' + v;
 		}
-		return linker.link(v) + '<!--d-->';
+		if (_.includes(v, '<script')) return v;
+		return linker.link(v);
 	});
 	if (whisp) lastWhisp = whisp;
-	chatCache = _.join(res, ''); var idCheck = chatCache.match(/<!---cmid:(\d+)-->/);
+	chatCache = _.join(res, '<!--d-->'); var idCheck = chatCache.match(/<!---cmid:(\d+)-->/);
 	if (idCheck) chatCheck = idCheck[1];
 	$('#demo').html(chatCache);
 });
@@ -784,7 +784,7 @@ var onlineRead = _.throttle(function() {
 	onlineTimer = window.setInterval(onlineUpd, 1000);
 	if (html.match(/Warning:/)) online = onlineList;
 	else
-		_(brarray).initial().each(function(v) {
+		_.each(_.initial(brarray), function(v) {
 			var rank = v.match(/background-color: ([a-z]+);/);
 			if (rank)	rank = (function(){ switch (rank[1]) {
 				case 'cyan': return 'noob';
@@ -885,6 +885,141 @@ function onlineWrite() {
 	} else _.each(onlineList, entry);
 	onlineCache = $('#online').html();
 }
-onlineRead(); new MutationObserver(onlineRead).observe($('#online')[0], {childList: true});
+new MutationObserver(onlineRead).observe($('#online')[0], {childList: true});
+
+// emoticon picker
+function appendToTextbox(text){
+	var be = $('#bericht')[0], start = be.selectionStart, end = be.selectionEnd;
+	var txt = $('#bericht').val(), range = start + text.length;
+	$('#bericht').val(txt.substring(0, start) + text + txt.substr(end)).focus();
+	be.setSelectionRange(range, range, 'none');
+}
+
+var emoticons = {
+	Faces: [
+		{n: ':)', w: 15, h: 15, p: '-1px -17px'},
+		{n: ':D', w: 15, h: 15, p: '-17px -17px'},
+		{n: ';)', w: 15, h: 15, p: '-33px -17px'},
+		{n: ':S', w: 15, h: 15, p: '-49px -17px'},
+		{n: ':@', w: 15, h: 15, p: '-81px -17px'},
+		{n: "-_-'", w: 15, h: 15, p: '-40px -53px'},
+		{n: ':O', w: 16, h: 16, p: '-1px -33px'},
+		{n: 'xD', w: 16, h: 16, p: '-18px -33px'},
+		{n: ':fp:', w: 19, h: 19, p: '-35px -33px'},
+		{n: 'R:', w: 16, h: 16, p: '-55px -33px'},
+		{n: 'RB:', w: 16, h: 16, p: '-72px -33px'},
+		{n: 'R(', w: 16, h: 16, p: '-89px -33px'},
+		{n: ':ponything:', w: 16, h: 23, p: '-109px -90px'},
+		{n: ':dummy:', w: 21, h: 16, p: '-1px -53px'},
+		{n: ':nuu:', w: 16, h: 16, p: '-23px -53px'}
+	], Memes: [
+		{n: ':troll:', w: 18, h: 15, p: '-1px -70px'},
+		{n: ':lol:', w: 17, h: 20, p: '-20px -70px'},
+		{n: ':megusta:', w: 22, h: 23, p: '-38px -70px'},
+		{n: ':no:', w: 20, h: 20, p: '-61px -70px'},
+		{n: ':raeg:', w: 20, h: 20, p: '-61px -91px'},
+		{n: ':pface:', w: 14, h: 19, p: '-82px -70px'},
+		{n: ':falone:', w: 26, h: 24, p: '-82px -90px'},
+		{n: ':ohplz:', w: 17, h: 19, p: '-1px -94px'},
+		{n: ':ydsay:', w: 20, h: 16, p: '-19px -94px'},
+		{n: ':doge:', w: 20, h: 20, p: '-97px -69px'}
+	], Other: [
+		{n: '@<3@', w: 15, h: 13, p: '-61px -114px'},
+		{n: ':yoshi:', w: 16, h: 16, p: '-1px -114px'},
+		{n: ':msonic:', w: 16, h: 16, p: '-18px -114px'},
+		{n: ':pball:', w: 14, h: 15, p: '-35px -114px'},
+		{n: ':file:', w: 10, h: 14, p: '-50px -114px'},
+		{n: '//to do', w: 16, h: 16, p: '-77px -114px'},
+		{n: ':cake:', w: 15, h: 15, p: '-94px -115px'},
+		{n: ':mario:', w: 15, h: 15, p: '-110px -115px'},
+		{n: ':luigi:', w: 15, h: 14, p: '-126px -116px'},
+		{n: ':ds:', w: 15, h: 15, p: '-1px -131px'},
+		{n: ':burger:', w: 15, h: 15, p: '-17px -130px'},
+		{n: ':taco:', w: 15, h: 15, p: '-33px -130px'},
+		{n: ':icecream:', w: 15, h: 15, p: '-49px -130px'}
+	]
+};
+
+$('body').append(
+	$('<div/>', {id: 'plus-emoticonPicker'}),
+	$('<div/>', {id: 'plus-emoticonPickerBtn'})
+);
+
+$('#plus-emoticonPickerBtn').click(function() {
+	$('#plus-emoticonPicker, #plus-emoticonPickerBtn').toggleClass('active');
+});
+
+_.each(emoticons, function(emotes, cat) {
+	$('#plus-emoticonPicker').append($('<hr>', {title: cat}));
+	_.each(emotes, function(emote) {
+		$("#plus-emoticonPicker").append($('<span/>', {css: {
+				backgroundPosition: emote.p, width: emote.w, height: emote.h
+		}}).click(function() { appendToTextbox(emote.n); }).attr('title', emote.n));
+	});
+});
+
+// imgur uploader
+$('body').append(
+	$('<input/>', {id: 'plus-imgurUploadInput', type: 'file'}).hide(),
+	$('<div/>', {id: 'plus-imgurUploadBtn'}).click(function() {
+		$('#plus-imgurUploadInput').click();
+	})
+);
+
+function uploadToImgur(file) {
+	var fd = new FormData(); fd.append('image', file);
+	var xhr = $.ajax('https://api.imgur.com/3/image.json', {
+		type: 'POST', data: fd, processData: false, contentType: false,
+		headers: {Authorization: 'Client-ID 0609f1f5d0e4a2b'}, dataType: 'json',
+		xhr: function() {
+			// trick to get the progress event in jQuery ajax
+			var xhr = new window.XMLHttpRequest();
+			xhr.upload.addEventListener('progress', function(evt) {
+				$('#plus_imgurUploadingBarPercentage').css('width', Math.round(evt.loaded / evt.total * 100) + '%');
+			}, false);
+			return xhr;
+		},
+		success: function(resp) {
+			if (!resp.success) {
+				var err = resp.data ? '\n"' + resp.data.error + '"' : '';
+				chatErr('An error occured while uploading to Imgur: ' + err);
+			} else appendToTextbox(resp.data.link);
+		},
+		error: function(xhr, stat) {
+			if (stat == 'abort') return;
+			chatErr('An unknown error occured while uploading to Imgur.');
+		},
+		complete: function() {
+			$('#plus-imgurUploadInput').val('');
+			$('#plus_imgurUploading').fadeOut(400, function() { $(this).remove(); });
+		}
+	});
+
+	$('body').append(
+		$('<div/>', {id: 'plus_imgurUploading', text: 'Uploading to Imgur...'}).append(
+			$('<div/>', {id: 'plus_imgurUploadingBar'}).html(
+				$('<div/>', {id: 'plus_imgurUploadingBarPercentage'})
+			),
+			$('<div/>', {id: 'plus_imgurCancelUpload', text: 'Cancel'}).click(function() {
+				xhr.abort();
+			})
+		)
+	);
+}
+
+$('#plus-imgurUploadInput').change(function() { uploadToImgur($(this)[0].files[0]); });
+
+$(document).on('paste', function(evt) {
+	var items = (evt.clipboardData || evt.originalEvent.clipboardData).items, blob = null;
+	_.each(items, function(item) { if (_.startsWith(item.type, 'image')) blob = item.getAsFile(); });
+
+	if (blob) {
+		var reader = new FileReader();
+		reader.onload = function() {
+			uploadToImgur(reader.result.replace(/^data:image\/(png|jpg);base64,/, ""));
+		};
+		reader.readAsDataURL(blob);
+	}
+});
 
 chatMsg('Welcome to Plaza+! Type /+help for help with Plaza+.');

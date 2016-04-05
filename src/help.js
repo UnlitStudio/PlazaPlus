@@ -1,7 +1,20 @@
-/* globals _, $ */
-/* exported clrs */
+var $ = require('jquery');
+var startsWith = require('lodash/startsWith');
+var join = require('lodash/join');
+var map = require('lodash/map');
+var split = require('lodash/split');
+var trim = require('lodash/trim');
+var repeat = require('lodash/repeat');
+var defer = require('lodash/defer');
+var toLower = require('lodash/toLower');
+var constant = require('lodash/constant');
+var cloneDeepWith = require('lodash/cloneDeepWith');
+var isNull = require('lodash/isNull');
 
-var page = false, esc = _.escape, helpData = {
+var parseCspl = require('./func/parseCspl.js');
+var parseColor = require('./func/parseColor.js');
+
+var page = false, esc = require('lodash/escape'), helpData = {
 	home: ['Home',
 		'Welcome to Plaza+! To get started, here are some useful help pages to look at:', br(),
 		'Click on a link or button to open that page.', br(),
@@ -56,25 +69,27 @@ var page = false, esc = _.escape, helpData = {
 		'You can still use regular cSplit configurations with no problems, ',
 		"but Plaza+ adds some extra options to cSplit's format:", br(),
 		br(),
-		cspl('Username', 'f00 db0024 b60049 92006d 6d0092 4900b6 2400db 00f'),
-		' /cspl conf Username=red/blue', br(),
+		cspl('Username=red/blue'), br(),
 		'You can create a gradient in your cSplit by using / to seperate colors.',
 		br(), br(),
-		cspl('Username', 'f00 a05 50a 00f ffd700 eacf40 d5c880 c0c0c0'),
-		' /cspl conf User=red/blue name=gold/silver', br(),
+		cspl('User=red/blue name=silver/gold'), br(),
 		'You can have multiple gradients in your cSplit, just like you can have multiple colors in regular cSplit configurations.',
 		br(), br(),
-		cspl('Username', 'f00 b62500 6d4900 246e00 006e24 00496d 0025b6 00f'),
-		' /cspl conf Username=red/green/blue', br(),
+		cspl('User=gold/purple name=silver'), br(),
+		'You can also mixmatch gradients and non-gradients.',
+		br(), br(),
+		cspl('Username=red/yellow/brown/blue'), br(),
 		"Gradients aren't limited to only one color, either!",
 		br(), br(),
-		cspl('Username', 'f00 ff9200 dbff00 49ff00 00ff49 00ffdb 0092ff 00f'),
-		' /cspl conf Username=hsv:red/blue', br(),
+		cspl('Username=hsv:gray/blue'), br(),
 		'You can also use HSV gradients if you want.',
 		br(), br(),
-		cspl('Username', 'f00 fdba14 a0fa27 3af855 4df5dd 5f9ef3 9571f0 ee82ee'),
-		' /cspl conf Username=rainbow', br(),
-		'You can also have a rainbow cSplit! This is actually the same as: /cspl conf Username=hsv:red/violet',
+		cspl('Username=rainbow'), br(),
+		'You can also have a rainbow cSplit! This is actually the same as:', br(),
+		cspl('Username=hsv:red/violet'),
+		br(), br(),
+		cspl('User=red name=blue'), br(),
+		"Regular cSplit configurations will still work just as you'd expect!",
 		br(), br(),
 		'If you want to get advanced, you can also apply filters to colors. ',
 		'More details can be found on the ', lnk('colors'), ' page.', br(),
@@ -88,78 +103,68 @@ var page = false, esc = _.escape, helpData = {
 		"is required and goes from -360 to 360. The grayscale filter doesn't accept a value. The ",
 		'filters available are lighten, brighten, darken, desaturate, saturate, spin, and grayscale.',
 		br(), br(),
-		clr('Username', 'daa520'), ' goldenrod', br(),
-		clr('Username', 'e4b849'), ' goldenrod;lighten', br(),
-		clr('Username', 'ebc975'), ' goldenrod;lighten20', br(),
+		clr('Username', 'goldenrod'), br(),
+		clr('Username', 'goldenrod;lighten'), br(),
+		clr('Username', 'goldenrod;lighten20'), br(),
 		br(),
-		clr('Username', 'daa520'), ' goldenrod', br(),
-		clr('Username', 'f3be39'), ' goldenrod;brighten', br(),
-		clr('Username', 'ffd853'), ' goldenrod;brighten20', br(),
+		clr('Username', 'goldenrod'), br(),
+		clr('Username', 'goldenrod;brighten'), br(),
+		clr('Username', 'goldenrod;brighten20'), br(),
 		br(),
-		clr('Username', 'daa520'), ' goldenrod', br(),
-		clr('Username', 'ad8319'), ' goldenrod;darken', br(),
-		clr('Username', '816213'), ' goldenrod;darken20', br(),
+		clr('Username', 'goldenrod'), br(),
+		clr('Username', 'goldenrod;darken'), br(),
+		clr('Username', 'goldenrod;darken20'), br(),
 		br(),
-		clr('Username', 'daa520'), ' goldenrod', br(),
-		clr('Username', 'cda02c'), ' goldenrod;desaturate', br(),
-		clr('Username', 'c19a39'), ' goldenrod;desaturate20', br(),
+		clr('Username', 'goldenrod'), br(),
+		clr('Username', 'goldenrod;desaturate'), br(),
+		clr('Username', 'goldenrod;desaturate20'), br(),
 		br(),
-		clr('Username', 'daa520'), ' goldenrod', br(),
-		clr('Username', 'e6aa13'), ' goldenrod;saturate', br(),
-		clr('Username', 'f3b007'), ' goldenrod;saturate20', br(),
+		clr('Username', 'goldenrod'), br(),
+		clr('Username', 'goldenrod;saturate'), br(),
+		clr('Username', 'goldenrod;saturate20'), br(),
 		br(),
-		clr('Username', 'da20b2'), ' goldenrod;spin-90', br(),
-		clr('Username', 'daa520'), ' goldenrod', br(),
-		clr('Username', '20da48'), ' goldenrod;spin90', br(),
-		clr('Username', '2055da'), ' goldenrod;spin180', br(),
-		clr('Username', 'da20b2'), ' goldenrod;spin270', br(),
+		clr('Username', 'goldenrod;spin-90'), br(),
+		clr('Username', 'goldenrod'), br(),
+		clr('Username', 'goldenrod;spin90'), br(),
+		clr('Username', 'goldenrod;spin180'), br(),
+		clr('Username', 'goldenrod;spin270'), br(),
 		br(),
-		clr('Username', '7d7d7d'), ' goldenrod;grayscale', br(),
+		clr('Username', 'goldenrod;grayscale'), br(),
 		'Note: "greyscale" can be used as well, for those brits out there. ;)', br()
 	]
 };
 
-// Converts "/cspl conf" format to be used for cspl()
-// Requires the input to be generated cSplit, not extended cSplit.
-// Use if the /cspl page needs to be changed.
-function clrs(txt) {
-	if (_.startsWith(txt, '/cspl conf ')) txt = txt.substr(11);
-	return _.join(_.map(_.split(_.trim(txt), ' '), function(v) {
-		var n = _.split(v, '#'); v = n[1];
-		if (v[0] == v[1] && v[2] == v[3] && v[4] == v[5])
-			v = v[0] + v[2] + v[4];
-		return _.trim(_.repeat(v + ' ', n[0].length - 1));
-	}), ' ');
-}
-
 function br() { return $('<br>'); }
 function btn(id, txt) {
 	var btn = $('<button/>', {text: txt || id, click: function() { openPage(id); }});
-	_.defer(function() { btn.text(txt || (helpData[_.toLower(id)] || [])[0] || id); });
+	defer(function() { btn.text(txt || (helpData[toLower(id)] || [])[0] || id); });
 	return btn;
 }
 function lnk(id, txt) {
 	var a = $('<a/>', {text: txt || id, href: '#'+id});
-	_.defer(function() { a.text(txt || (helpData[_.toLower(id)] || [])[0] || id); });
+	defer(function() { a.text(txt || (helpData[toLower(id)] || [])[0] || id); });
 	return a;
 }
-function cspl(txt, clrs) {
-	return $('<b/>').html($('<u/>').html(
-		_([_.split(txt, ''), _.split(clrs, ' ')]).unzip().map(function(v) {
-			return $('<span/>', {text: v[0], css: {color: '#'+v[1]}});
-		}).push(':').value()
-	));
+function cspl(txt) {
+	var cspl = (parseCspl(txt))[0];
+	return $('<span/>').html($('<b/>').html($('<u/>').append(
+		map(split(cspl, ' '), function(v) {
+			v = split(v, '='); return $('<span/>', {text: v[0], css: {color: v[1]}});
+		}).concat([':'])
+	))).append(' /cspl conf '+txt);
 }
-function clr(txt, clr) {
-	return $('<span/>', {css: {color: '#'+clr}}).html($('<b/>').html($('<u/>').html(txt+':')));
+function clr(txt, col) {
+	var clr = parseColor(col);
+	return $('<span/>').html(
+		$('<span/>', {css: {color: clr}}).html($('<b/>').html($('<u/>').html(txt+':')))).append(' '+col);
 }
 function openPage(id) {
-	id = _.toLower(id); location.hash = '#'+id; if (id == page) return;
-	var content = _.cloneDeepWith(helpData[id] || ['Not Found', 'Page not found.'], function(v) {
-		if (v instanceof jQuery) return $(v).clone(true);
+	id = toLower(id); location.hash = '#'+id; if (id == page) return;
+	var content = cloneDeepWith(helpData[id] || ['Not Found', 'Page not found.'], function(v) {
+		if (v instanceof $) return $(v).clone(true);
 	}), title = content.shift() || id;
 	if (page === false) $('#title').text(title);
-	else if (_.isNull(page)) {
+	else if (isNull(page)) {
 		$('#title').text(title); $('#content').html(content).hide().fadeIn('fast');
 	} else {
 		$('#title').fadeOut(function() { $('#title').text(title).fadeIn(); });
@@ -174,4 +179,4 @@ window.onhashchange = function() {
 };
 
 $('#goHome').click(function() { openPage('home'); });
-window.onhashchange(); _.defer(function() { page = null; window.onhashchange(); });
+window.onhashchange(); defer(function() { page = null; window.onhashchange(); });

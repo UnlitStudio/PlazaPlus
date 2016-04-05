@@ -1,8 +1,22 @@
-/* globals _, $, chrome, Enums, tinycolor */
+/* globals chrome */
+var Enums = require('./enums.js');
+var $ = require('jquery');
+var toLower = require('lodash/toLower');
+var uniq = require('lodash/uniq');
+var each = require('lodash/each');
+var includes = require('lodash/includes');
+var map = require('lodash/map');
+var concat = require('lodash/concat');
+var split = require('lodash/split');
+var camelCase = require('lodash/camelCase');
+var toNumber = require('lodash/toNumber');
+var noop = require('lodash/noop');
+
+var tinycolor = require('tinycolor2');
+
+require('./options.less');
 
 $(function(){
-console.log('options loaded');
-
 function getColor(col) {
 	col = /^\s*rand(om)?\s*$/i.exec(col) ? tinycolor.random() : tinycolor(col);
 	if (!col.isValid()) return false; else return col;
@@ -18,7 +32,7 @@ $('.help').click(function() { $(this).next('.desc').fadeToggle(); });
 // omg thank you chrome <3
 function testSound() {
 	var a = new Audio();
-	a.src = chrome.extension.getURL('sounds/'+$('#notifySound').val());
+	a.src = chrome.extension.getURL('res/'+$('#notifySound').val());
 	a.volume = $('#notifyVolume').val() / 100;
 	a.play();
 }
@@ -44,17 +58,17 @@ $('#onlineColors input').change(function() {
 function checkAliases() {
 	var tags = [], me = false;
 	$('#aliases .alias').each(function() {
-		tags.push(_.toLower($(this).find('.tag input').val()));
+		tags.push(toLower($(this).find('.tag input').val()));
 	});
-	tags = _.uniq(tags);
-	_.each(tags, function(tag) {
+	tags = uniq(tags);
+	each(tags, function(tag) {
 		var check = false;
-		if (_.toLower(tag) == 'me') me = true;
+		if (toLower(tag) == 'me') me = true;
 		$('#aliases .alias').each(function() {
-			if (_.toLower($(this).find('.tag input').val()) != tag) return;
+			if (toLower($(this).find('.tag input').val()) != tag) return;
 			var error =
 				!tag ? "Alias tags can't be empty" :
-				_.includes(tag, ' ') ? "Alias tags can't contain spaces" :
+				includes(tag, ' ') ? "Alias tags can't contain spaces" :
 				check ? "This alias tag is already being used" :
 				false;
 			check = true;
@@ -94,19 +108,19 @@ $('#addalias .add button').click(function() {
 addAlias('Fayne', 'Fayne_Aldan');
 addAlias('Rob', 'Robdeprop');
 
-var bools = 'hideTabs onlineSort displayIcons notifyWhispers';
-var cols = 'normal noob mod banned ignored';
-var texts = 'notifyNames notifyIgnore notifySound';
-var nums = 'notifyVolume';
+var bools = ['hideTabs','onlineSort','displayIcons','notifyWhispers'];
+var cols = ['normal','noob','mod','banned','ignored'];
+var texts = ['notifyNames','notifyIgnore','notifySound'];
+var nums = ['notifyVolume'];
 
 var loaders = {};
 // booleans
-_(bools).split(' ').each(function(n) {
+each(bools, function(n) {
 	loaders[n] = function(v) { $('#'+n).prop('checked', v); };
 });
 // colors
-_(cols).split(' ').each(function(c) {
-	var n = _.camelCase('color-'+c);
+each(cols, function(c) {
+	var n = camelCase('color-'+c);
 	c = tinycolor(Enums.syncDef[n]);
 	loaders[n] = function(v) {
 		var col = getColor(v) || c;
@@ -115,30 +129,30 @@ _(cols).split(' ').each(function(c) {
 	};
 });
 // texts and numbers
-_(texts).split(' ').concat(_(nums).split(' ')).each(function(n) {
+each(concat(texts, split(nums, ' ')), function(n) {
 	loaders[n] = function(v) { $('#'+n).val(v); };
 });
 // aliases
 loaders.aliases = function(v) {
 	$('#aliases .alias').remove();
 	$('#aliases .error').remove();
-	_.each(v, function(alias) { addAlias(alias.tag, alias.user); });
+	each(v, function(alias) { addAlias(alias.tag, alias.user); });
 };
 
 var savers = {};
 // booleans
-_(bools).split(' ').each(function(n) {
+each(bools, function(n) {
 	savers[n] = function() { return $('#'+n).prop('checked'); };
 });
 // texts and colors
-_(texts).split(' ').concat(_(cols).split(' ').map(function(n) {
-	return _.camelCase('color-'+n);
-}).value()).each(function(n) {
+each(concat(texts, map(cols, function(n) {
+	return camelCase('color-'+n);
+})), function(n) {
 	savers[n] = function() { return $('#'+n).val(); };
 });
 // numbers
-_(nums).split(' ').each(function(n) {
-	savers[n] = function() { return _.toInteger($('#'+n).val()); };
+each(nums, function(n) {
+	savers[n] = function() { return toNumber($('#'+n).val()); };
 });
 // aliases
 savers.aliases = function() {
@@ -146,8 +160,8 @@ savers.aliases = function() {
 	$('#aliases .alias').each(function() {
 		var tag = $(this).find('.tag input').val();
 		var user = $(this).find('.user input').val();
-		var name = _.toLower(tag);
-		if (aliases[name] || !tag || _.includes(tag, ' ')) return;
+		var name = toLower(tag);
+		if (aliases[name] || !tag || includes(tag, ' ')) return;
 		aliases[name] = {tag: tag, user: user};
 	});
 	return aliases;
@@ -156,22 +170,22 @@ savers.aliases = function() {
 chrome.storage.sync.get(Enums.syncDef, function(items) {
 	// this won't halt the entire script, right?
 	if (chrome.runtime.lastError) throw new Error(chrome.runtime.lastError);
-	_.each(items, function(v, k) { console.log(loaders[k] || _.noop);
-	(loaders[k] || _.noop)(v); });
+	each(items, function(v, k) { console.log(loaders[k] || noop);
+	(loaders[k] || noop)(v); });
 });
 
 chrome.storage.onChanged.addListener(function(changes, space) {
 	if (space != 'sync') return;
-	_.each(changes, function(v, k) { (loaders[k] || _.noop)(v.newValue); });
+	each(changes, function(v, k) { (loaders[k] || noop)(v.newValue); });
 });
 
 function save(cb) {
-	var items = {}; _.each(savers, function(func, k) { items[k] = func(); });
+	var items = {}; each(savers, function(func, k) { items[k] = func(); });
 	console.log(items);
 	chrome.storage.sync.set(items, cb);
 }
 
-$('#apply').click(function() { save(_.noop); });
+$('#apply').click(function() { save(noop); });
 $('#ok').click(function() { save(function() { window.close(); }); });
 $('#cancel').click(function() { window.close(); });
 $('#reset').click(function() { $('#footer').hide(); $('#resetConfirm').show(); });
@@ -179,18 +193,5 @@ $('#resetNo').click(function() { $('#footer').show(); $('#resetConfirm').hide();
 $('#resetYes').click(function() {
 	$('#resetConfirm').html('<td class="center">Please wait...</td>');
 	chrome.storage.sync.clear(function() { location.reload(); });
-});
-$('#iconGrant').click(function() {
-	chrome.permissions.request({origins: ['http://188.166.72.241/']}, function(granted) {
-		if (!granted) return; $('#iconGranted').show(); $('#iconWarning').hide();
-	});
-});
-$('#iconDeny').click(function() {
-	chrome.permissions.remove({origins: ['http://188.166.72.241/']}, function(removed) {
-		if (!removed) return; $('#iconWarning').show(); $('#iconGranted').hide();
-	});
-});
-chrome.permissions.contains({origins: ['http://188.166.72.241/']}, function(result) {
-	if (result) $('#iconWarning').hide(); else $('#iconGranted').hide();
 });
 });
