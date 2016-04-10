@@ -758,7 +758,7 @@ var chatRead = _.throttle(function() {
 				if (icons[name]) i += ' src="' + icons[name] + '"';
 				var b = 'chatline';
 				if (focusList.length > 0 && !_.includes(_.map(focusList, _.toLower), name)) b += ' blur';
-				v = '<!--plused--><span class="'+b+'" user="'+name+'"><img '+i+'> '+v+'</span>';
+				v = '<!--plused-->'+v.replace(/^<div>/, '<div class="'+b+'" user="'+name+'"><img '+i+'> ');
 			} else v = '<!--plused-->' + v;
 		}
 		if (_.includes(v, '<script')) return v;
