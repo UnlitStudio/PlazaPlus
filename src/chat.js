@@ -567,16 +567,7 @@ function oxford(a) {
 	return a.length < 3 ? _.join(a, ' and ') : _.join(_.initial(a), ', ') + ', and ' + _.last(a);
 }
 
-function emotify(txt) {
-	txt = txt.replace(/:flip:/g, '(╯°□°）╯︵ ┻━┻'); // Table flip
-	txt = txt.replace(/:e:/g, 'é'); // Pokémon
-	txt = txt.replace(/:w:/g, 'ω'); // owo has evolved
-	txt = txt.replace(/:i:/g, 'ı'); // Erman Sayın
-	txt = txt.replace(/:=\/=:/g, '≠').replace(/:<=:/g, '≤').replace(/:>=:/g, '≥');
-	txt = txt.replace(/:\/:/g, '÷').replace(/:inf:/g, '∞').replace(/:pi:/g, 'π');
-	txt = txt.replace(/:+-:/g, '±').replace(/:rlo:/g, '\u202E').replace(/:lro:/g, '\u202D');
-	return txt;
-}
+var emotify = require('./func/emotify.js');
 
 function getChat(str) {
 	switch (_.toLower(str)) {
