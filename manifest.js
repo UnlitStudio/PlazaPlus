@@ -10,8 +10,8 @@ res = res.concat(sounds.map(function(n) { return 'res/'+n+'.ogg'; }));
 ({
 	manifest_version: 2,
 	name: 'Plaza+',
-	version: '4.6',
-	version_name: '4.6',
+	version: '4.6.1',
+	version_name: '4.6.1',
 	
 	description: 'Adds several new features and commands to the 3DSPlaza chatrooms.',
 	icons: {128: 'icon.png'},

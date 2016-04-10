@@ -1,7 +1,5 @@
 /* globals chrome */
 
-require('./chat.less');
-
 var Enums = require('./enums.js');
 var $ = require('jquery');
 var _ = {
@@ -80,6 +78,8 @@ var chatIns = _.rest(function(objs) {
 		throw new Error(canRun);
 	}
 })();
+
+require('./chat.less');
 
 function chatMsg(msg) {
 	chatIns($('<span/>', {text: ': '+msg, css: {color: 'gray'}}));
