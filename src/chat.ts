@@ -180,15 +180,16 @@ class DestPM implements Dest {
 		});
 	}
 	send(txt: string) {
-		return new Promise<string>(_.bind(function(ok, err) {
-			this.exec(this.subj, txt.replace(/\\\\/g, '\n')).then(function(stat: string) {
+		var exec = this.exec, subj = this.subj, user = this.user;
+		return new Promise<string>(function(ok, err) {
+			exec(subj, txt.replace(/\\\\/g, '\n')).then(function(stat: string) {
 				if (stat == 'unknown')
 					return err(`An unknown error occurred while sending the PM to ${user}.`);
 				if (stat == 'error')
 					return err(`Plaza+ can't confirm if your PM was sent to ${user}.`);
-				ok(`Your PM has been sent to ${this.user}.`);
+				ok(`Your PM has been sent to ${user}.`);
 			}, function(msg: string) { err(msg); });
-		}, this));
+		});
 	}
 	private exec(subj: string, msg: string) {
 		var user = this.user;
