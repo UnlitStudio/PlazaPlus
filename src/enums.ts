@@ -1,8 +1,10 @@
-module.exports = {
-	localDef: {
+import {Dict} from './helpers/types';
+
+export default {
+	localDef: <Dict<any>>{
 		iconCache: { Revision: 0 }
 	},
-	syncDef: {
+	syncDef: <Dict<any>>{
 		hideTabs: false, onlineSort: true, displayIcons: true,
 		colorNormal: '#0000ff', colorNoob: '#00ffff', colorMod: '#00ff00', colorBanned: '#ff0000',
 		colorIgnored: '#000000',

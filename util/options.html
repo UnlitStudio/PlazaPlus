@@ -29,7 +29,7 @@
 
 <div id="online">
 	<h1>Online List</h1>
-	<input type="checkbox" id="onlineSort" disabled>
+	<input type="checkbox" id="onlineSort" checked>
 	<label for="onlineSort">Categorize online list</label><br>
 	<h2>Whisper Button Colors</h2>
 	<table id="onlineColors">
@@ -124,9 +124,7 @@
 <table id="footer"><tr>
 	<td class="left"><button id="reset" style="float:left">Reset</button></td>
 	<td class="right">
-		<button id="apply">Apply</button>
-		<button id="cancel">Cancel</button>
-		<button id="ok">OK</button>
+		<button id="ok">Save</button>
 	</td>
 </tr></table>
 <table id="resetConfirm" style="display:none;"><tr>
@@ -136,6 +134,8 @@
 		<button id="resetYes">OK</button>
 	</td>
 </tr></table>
-<script type="text/javascript" src="/dist/options.js"></script>
+
+<script src="/js/vendor.js"></script>
+<script src="/js/options.js"></script>
 </body>
 </html>

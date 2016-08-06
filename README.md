@@ -9,6 +9,6 @@ npm install
 ```
 
 ## Building
-- `grunt`: Compiles LESS files and creates manifest.json
+- `grunt`: Compiles JavaScript files and creates manifest.json
 - `grunt zip`: Compresses the files into a ZIP file for the Chrome Web Store
-- `grunt clean`: Deletes compiled CSS files and manifest.json
+- `grunt clean`: Deletes compiled files

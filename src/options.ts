@@ -1,25 +1,17 @@
-/* globals chrome */
-var Enums = require('./enums.js');
-var $ = require('jquery');
-var toLower = require('lodash/toLower');
-var uniq = require('lodash/uniq');
-var each = require('lodash/each');
-var includes = require('lodash/includes');
-var map = require('lodash/map');
-var concat = require('lodash/concat');
-var split = require('lodash/split');
-var camelCase = require('lodash/camelCase');
-var toNumber = require('lodash/toNumber');
-var noop = require('lodash/noop');
-
-var tinycolor = require('tinycolor2');
-
-require('./options.less');
+import * as _ from 'lodash';
+import * as $ from 'jquery';
+import * as tinycolor from 'tinycolor2';
+import Enums from './enums';
+import {Dict} from './helpers/types';
+import './options.less';
 
 $(function(){
-function getColor(col) {
-	col = /^\s*rand(om)?\s*$/i.exec(col) ? tinycolor.random() : tinycolor(col);
-	if (!col.isValid()) return false; else return col;
+
+if (!chrome.storage.sync) chrome.storage.sync = chrome.storage.local;
+
+function getColor(color: string) {
+	var col = /^\s*rand(om)?\s*$/i.exec(color) ? tinycolor.random() : tinycolor(color);
+	if (!col.isValid()) return undefined; else return col;
 }
 
 $('#tabs img').click(function() {
@@ -56,19 +48,19 @@ $('#onlineColors input').change(function() {
 	$(this).parent().next().find('div').css('backgroundColor', color.toHexString());
 });
 function checkAliases() {
-	var tags = [], me = false;
+	var tags: string[] = [], me = false;
 	$('#aliases .alias').each(function() {
-		tags.push(toLower($(this).find('.tag input').val()));
+		tags.push(_.toLower($(this).find('.tag input').val()));
 	});
-	tags = uniq(tags);
-	each(tags, function(tag) {
+	tags = _.uniq(tags);
+	_.each(tags, function(tag) {
 		var check = false;
-		if (toLower(tag) == 'me') me = true;
+		if (_.toLower(tag) == 'me') me = true;
 		$('#aliases .alias').each(function() {
-			if (toLower($(this).find('.tag input').val()) != tag) return;
+			if (_.toLower($(this).find('.tag input').val()) != tag) return;
 			var error =
 				!tag ? "Alias tags can't be empty" :
-				includes(tag, ' ') ? "Alias tags can't contain spaces" :
+				_.includes(tag, ' ') ? "Alias tags can't contain spaces" :
 				check ? "This alias tag is already being used" :
 				false;
 			check = true;
@@ -78,7 +70,7 @@ function checkAliases() {
 	});
 	if (me) $('#meTip').slideUp(); else $('#meTip').slideDown();
 }
-function addAlias(tag, user) {
+function addAlias(tag: string, user: string) {
 	$('#addalias').before(
 		$('<tr/>', {'class': 'alias'}).append(
 			$('<td/>', {'class': 'tag'}).append(
@@ -113,15 +105,16 @@ var cols = ['normal','noob','mod','banned','ignored'];
 var texts = ['notifyNames','notifyIgnore','notifySound'];
 var nums = ['notifyVolume'];
 
-var loaders = {};
+type Loader = (val: any) => void;
+var loaders: Dict<Loader> = {};
 // booleans
-each(bools, function(n) {
+_.each(bools, function(n) {
 	loaders[n] = function(v) { $('#'+n).prop('checked', v); };
 });
 // colors
-each(cols, function(c) {
-	var n = camelCase('color-'+c);
-	c = tinycolor(Enums.syncDef[n]);
+_.each(cols, function(col) {
+	var n = _.camelCase('color-'+col);
+	var c = tinycolor(Enums.syncDef[n]);
 	loaders[n] = function(v) {
 		var col = getColor(v) || c;
 		$('#'+n).val(col.toHexString());
@@ -129,69 +122,66 @@ each(cols, function(c) {
 	};
 });
 // texts and numbers
-each(concat(texts, split(nums, ' ')), function(n) {
+_.each(_.concat(texts, nums), function(n) {
 	loaders[n] = function(v) { $('#'+n).val(v); };
 });
 // aliases
-loaders.aliases = function(v) {
+loaders['aliases'] = function(v) {
 	$('#aliases .alias').remove();
 	$('#aliases .error').remove();
-	each(v, function(alias) { addAlias(alias.tag, alias.user); });
+	_.each(v, function(alias) { addAlias(alias.tag, alias.user); });
 };
 
-var savers = {};
+type Saver = () => any;
+var savers: Dict<Saver> = {};
 // booleans
-each(bools, function(n) {
+_.each(bools, function(n) {
 	savers[n] = function() { return $('#'+n).prop('checked'); };
 });
 // texts and colors
-each(concat(texts, map(cols, function(n) {
-	return camelCase('color-'+n);
+_.each(_.concat(texts, _.map(cols, function(n) {
+	return _.camelCase('color-'+n);
 })), function(n) {
 	savers[n] = function() { return $('#'+n).val(); };
 });
 // numbers
-each(nums, function(n) {
-	savers[n] = function() { return toNumber($('#'+n).val()); };
+_.each(nums, function(n) {
+	savers[n] = function() { return _.toNumber($('#'+n).val()); };
 });
 // aliases
-savers.aliases = function() {
-	var aliases = {};
+savers['aliases'] = function() {
+	var aliases: Dict<{}> = {};
 	$('#aliases .alias').each(function() {
 		var tag = $(this).find('.tag input').val();
 		var user = $(this).find('.user input').val();
-		var name = toLower(tag);
-		if (aliases[name] || !tag || includes(tag, ' ')) return;
+		var name = _.toLower(tag);
+		if (aliases[name] || !tag || _.includes(tag, ' ')) return;
 		aliases[name] = {tag: tag, user: user};
 	});
 	return aliases;
 };
 
-chrome.storage.sync.get(Enums.syncDef, function(items) {
+chrome.storage.sync.get(function(items) {
 	// this won't halt the entire script, right?
 	if (chrome.runtime.lastError) throw new Error(chrome.runtime.lastError);
-	each(items, function(v, k) { console.log(loaders[k] || noop);
-	(loaders[k] || noop)(v); });
+	_.each(items, function(v, k) { console.log(loaders[k] || _.noop);
+	(loaders[k] || _.noop)(v); });
 });
 
 chrome.storage.onChanged.addListener(function(changes, space) {
 	if (space != 'sync') return;
-	each(changes, function(v, k) { (loaders[k] || noop)(v.newValue); });
+	_.each(changes, function(v, k) { (loaders[k] || _.noop)(v.newValue); });
 });
 
-function save(cb) {
-	var items = {}; each(savers, function(func, k) { items[k] = func(); });
-	console.log(items);
-	chrome.storage.sync.set(items, cb);
-}
-
-$('#apply').click(function() { save(noop); });
-$('#ok').click(function() { save(function() { window.close(); }); });
-$('#cancel').click(function() { window.close(); });
+$('#save').click(function() {
+	var items: Dict<any> = {}; _.each(savers, function(func, k) { items[k] = func(); });
+	chrome.storage.sync.set(items);
+});
 $('#reset').click(function() { $('#footer').hide(); $('#resetConfirm').show(); });
 $('#resetNo').click(function() { $('#footer').show(); $('#resetConfirm').hide(); });
 $('#resetYes').click(function() {
 	$('#resetConfirm').html('<td class="center">Please wait...</td>');
-	chrome.storage.sync.clear(function() { location.reload(); });
+	chrome.storage.sync.set(Enums.syncDef, function() { location.reload(); });
 });
+
 });

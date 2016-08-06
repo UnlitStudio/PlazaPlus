@@ -1,4 +1,4 @@
-module.exports = function(txt) {
+export default function(txt: string) {
 	return txt
 	.replace(/:flip:/g, '(╯°□°）╯︵ ┻━┻') // Table flip
 	.replace(/:e:/g, 'é') // Pokémon

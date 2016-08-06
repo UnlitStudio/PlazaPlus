@@ -4,6 +4,7 @@
 @col0: #d11141; @col1: #00b159; @col2: #00aedb; @col3: #f37735; @col4: #ffc425;
 @colopt: #000000;
 
+.container { background-color: white; }
 #send { left: 616px; }
 #plusbar {
 	position: absolute; left: 5px; top: 353px; width: 600px; height: 7px;
@@ -25,7 +26,7 @@
 	&.plusbox0 { .box(@col0) } &.plusbox1 { .box(@col1) } &.plusbox2 { .box(@col2) }
 	&.plusbox3 { .box(@col3) } &.plusbox4 { .box(@col4) }
 }
-form input[name=color] { width: 130px; }
+form input[name=color] { width: 100px; }
 .plusicon { &:not([src]), &[src=""] { display: none; } }
 /* In case Plaza+ can't load. */
 .plazaplus {
@@ -53,7 +54,7 @@ form input[name=color] { width: 130px; }
 #plus-emoticonPicker {
 	position: absolute; bottom: 42px; right: 30px; width: 150px; height: auto; z-index: 1;
 	background: #ffffff; border: 2px solid #aaa; border-radius: 5px; text-align: center;
-	-webkit-user-select: none; moz-user-select: none; user-select: none;
+	-webkit-user-select: none; -moz-user-select: none; user-select: none;
 	pointer-events: none; opacity: 0; transition: all .5s;
 	&.active { pointer-events: initial; bottom: 32px; opacity: 1; }
 	&:after, &:before {

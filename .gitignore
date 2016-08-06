@@ -1,6 +1,7 @@
-build/
 dist/
+js/
 node_modules/
+typings/
 .DS_STORE
 Thumbs.db
 /manifest.json

@@ -1,64 +1,13 @@
-/* globals chrome */
+import * as _ from 'lodash';
+import * as $ from 'jquery';
+import * as tinycolor from 'tinycolor2';
+import * as Autolinker from 'autolinker';
+import Enums from './enums';
+import {sendMsgFactory, listenForMsgs, MsgListenReg} from './func/portHelpers';
+import {storageListen} from './helpers/storage';
+import {Dict, IDict} from './helpers/types';
 
-var Enums = require('./enums.js');
-var $ = require('jquery');
-var _ = {
-	rest: require('lodash/rest'),
-	concat: require('lodash/concat'),
-	isString: require('lodash/isString'),
-	now: require('lodash/now'),
-	spread: require('lodash/spread'),
-	head: require('lodash/head'),
-	noop: require('lodash/noop'),
-	tail: require('lodash/tail'),
-	each: require('lodash/each'),
-	toLower: require('lodash/toLower'),
-	times: require('lodash/times'),
-	includes: require('lodash/includes'),
-	repeat: require('lodash/repeat'),
-	map: require('lodash/map'),
-	template: require('lodash/template'),
-	sample: require('lodash/sample'),
-	split: require('lodash/split'),
-	compact: require('lodash/compact'),
-	indexOf: require('lodash/indexOf'),
-	startsWith: require('lodash/startsWith'),
-	isNil: require('lodash/isNil'),
-	bind: require('lodash/bind'),
-	constant: require('lodash/constant'),
-	join: require('lodash/join'),
-	initial: require('lodash/initial'),
-	last: require('lodash/last'),
-	escape: require('lodash/escape'),
-	toLower: require('lodash/toLower'),
-	unescape: require('lodash/unescape'),
-	clamp: require('lodash/clamp'),
-	memoize: require('lodash/memoize'),
-	reduce: require('lodash/reduce'),
-	trim: require('lodash/trim'),
-	cond: require('lodash/cond'),
-	concat: require('lodash/concat'),
-	rearg: require('lodash/rearg'),
-	partial: require('lodash/partial'),
-	toNumber: require('lodash/toNumber'),
-	isNaN: require('lodash/isNaN'),
-	eq: require('lodash/eq'),
-	uniqueId: require('lodash/uniqueId'),
-	zip: require('lodash/zip'),
-	split: require('lodash/split'),
-	throttle: require('lodash/throttle'),
-	take: require('lodash/take'),
-	escapeRegExp: require('lodash/escapeRegExp'),
-	compact: require('lodash/compact'),
-	split: require('lodash/split'),
-	groupBy: require('lodash/groupBy')
-};
-_.partial.placeholder = _;
-var Promise = require('promise');
-var Autolinker = require('autolinker');
-var tinycolor = require('tinycolor2');
-
-var chatIns = _.rest(function(objs) {
+var chatIns = _.rest(function(objs: any[]) {
 	$('#demo').prepend(_.concat(objs, '<br>', '<!--d-->'));
 });
 // Wrapped because I don't exactly want to keep canRun in memory.
@@ -79,30 +28,31 @@ var chatIns = _.rest(function(objs) {
 	}
 })();
 
-require('./chat.less');
+import './chat.less';
 
-function chatMsg(msg) {
+function chatMsg(msg: string) {
 	chatIns($('<span/>', {text: ': '+msg, css: {color: 'gray'}}));
 }
-function chatErr(msg) {
+function chatErr(msg: string) {
 	chatIns($('<span/>', {text: ': '+msg, css: {color: 'red'}}));
 }
 function microtime() {
-	var now = _.now() / 1000, s = parseInt(now, 10);
+	var now = _.now() / 1000, s = parseInt(String(now), 10);
 	return (Math.round((now - s) * 1000) / 1000) + ' ' + s;
 }
+interface Alias { name: string; tag: string; }
 
-var chatroom = /\?room=(.*)/.exec($('.contain_inside form').attr('action'));
-chatroom = chatroom ? chatroom[1] : 'v3original';
+var chatroom = (/\?room=(.*)/.exec($('.contain_inside form').attr('action')) || ['','v3original'])[1];
 var port = chrome.runtime.connect({name: 'chat:'+chatroom}), mainTab = false;
-var active = 0, dests = {}, icons = {}, aliases = {}, focusList = [], isFocus = false;
-var focusMode = 'blur', asyncLock = 0, notifyNames = '', notifyWhispers = false, lastWhisp = false;
-var onlineSort = false, colorNormal = '#0000ff', colorNoob = '#00ffff', colorMod = '#00ff00';
+var active = 0, boxes: TextBox[] = [], icons: Dict<string> = {}, aliases: Dict<Alias> = {};
+var focusList: string[] = [], focusMode = 'blur', isFocus = false, asyncLock = 0, notifyNames = '';
+var notifyWhispers = false, lastWhisp: string = null, onlineSort = false;
+var colorNormal = '#0000ff', colorNoob = '#00ffff', colorMod = '#00ff00';
 var colorBanned = '#ff0000', colorIgnored = '#000000';
 
 // Chrome doesn't allow unsafeWindow. D:<
 // Instead, we have to inject an event listener into the page.
-var oldsp;
+var oldsp: () => void;
 (function() {
 	var s = document.createElement('script');
 	s.src = chrome.extension.getURL('res/chatInject.js');
@@ -113,14 +63,12 @@ var oldsp;
 	oldsp = function() { document.dispatchEvent(evt); };
 })();
 
-// message listeners
-var listeners = {};
-listeners.newMain = function() { mainTab = true; };
+if (!chrome.storage.sync) chrome.storage.sync = chrome.storage.local;
 
 // message helpers
-var sendMessage = _.rest(function(type, data) { port.postMessage(_.concat([type], data)); });
-port.onMessage.addListener(function(msg, sender) {
-	_.spread(listeners[_.head(msg)] || _.noop)(_.tail(msg));
+var sendMessage = sendMsgFactory(port);
+listenForMsgs(port, {
+	newMain() { mainTab = true; }
 });
 
 port.onDisconnect.addListener(function() {
@@ -135,46 +83,29 @@ port.onDisconnect.addListener(function() {
 
 var linker = new Autolinker({stripPrefix: false, twitter: false, phone: false});
 
-var syncListeners = {}, localListeners = {};
-syncListeners.hideTabs = function(v) {
-	$('#pluscss1').text(v ? '#plusbtn0,#plusbtn1,#plusbtn2,#plusbtn3,#plusbtn4{width:0px !important}' : '');
-};
-syncListeners.displayIcons = function(v) {
-	$('#pluscss0').text(v ? '' : '.plusicon{display:none}');
-};
-syncListeners.aliases = function(v) { aliases = v; };
-syncListeners.notifyNames = function(v) { notifyNames = v; };
-syncListeners.notifyWhispers = function(v) { notifyWhispers = v; };
-syncListeners.onlineSort = function(v) { onlineSort = v; };
-syncListeners.colorNormal = function(v) { colorNormal = v; };
-syncListeners.colorNoob = function(v) { colorNoob = v; };
-syncListeners.colorMod = function(v) { colorMod = v; };
-syncListeners.colorBanned = function(v) { colorBanned = v; };
-syncListeners.colorIgnored = function(v) { colorIgnored = v; };
-
-localListeners.iconCache = function(v) {
-	icons = v; $('.plusicon').attr('src', null);
-	_.each(v, function(v, k) {
-		$('.chatline[user="'+_.toLower(k)+'"] .plusicon').attr('src', v);
-	});
-};
-
-chrome.storage.onChanged.addListener(function(changes, space) {
-	if (space != 'sync') return;
-	_.each(changes, function(v, k) { (syncListeners[k] || _.noop)(v.newValue, v.oldValue); });
-});
-chrome.storage.onChanged.addListener(function(changes, space) {
-	if (space != 'local') return;
-	_.each(changes, function(v, k) { (localListeners[k] || _.noop)(v.newValue, v.oldValue); });
-});
-
-chrome.storage.sync.get(Enums.syncDef, function(items) {
-	if (chrome.runtime.lastError) throw new Error(chrome.runtime.lastError);
-	_.each(items, function(v, k) { (syncListeners[k] || _.noop)(v); });
-});
-chrome.storage.local.get(Enums.localDef, function(items) {
-	if (chrome.runtime.lastError) throw new Error(chrome.runtime.lastError);
-	_.each(items, function(v, k) { (localListeners[k] || _.noop)(v); });
+storageListen({
+	iconCache(v) {
+		icons = v; $('.plusicon').attr('src', null);
+		_.each(v, function(v, k) {
+			$('.chatline[user="'+_.toLower(k)+'"] .plusicon').attr('src', v);
+		});
+	}
+}, {
+	hideTabs(v) {
+		$('#pluscss1').text(v ? '#plusbtn0,#plusbtn1,#plusbtn2,#plusbtn3,#plusbtn4{width:0px !important}' : '');
+	},
+	displayIcons(v) {
+		$('#pluscss0').text(v ? '' : '.plusicon{display:none}');
+	},
+	aliases(v) { aliases = v; },
+	notifyNames(v) { notifyNames = v; },
+	notifyWhispers(v) { notifyWhispers = v; },
+	onlineSort(v) { onlineSort = v; },
+	colorNormal(v) { colorNormal = v; },
+	colorNoob(v) { colorNoob = v; },
+	colorMod(v) { colorMod = v; },
+	colorBanned(v) { colorBanned = v; },
+	colorIgnored(v) { colorIgnored = v; }
 });
 
 $('body').addClass('plazaplus');
@@ -189,145 +120,179 @@ $('form:first').html('Change your name color:<br>').append(
 	'<br>'
 ); $('<div/>', {id: 'plusbar'}).appendTo('body');
 
-var destTypes = {};
-destTypes.chat = {
-	info: function() { return 'Chat'; },
-	send: function(cb, txt) { sendChat(txt, true); cb(true); },
-	usable: function(cb) { cb(true); }
-};
-destTypes.whisper = {
-	info: function() {
-		if (this.tag && this.tag != this.user)
-			return 'Whisper '+this.tag+' ('+this.user+')';
-		return 'Whisper '+this.user;
-	},
-	send: function(cb, txt) { sendChat('/whisperto '+this.user+' '+txt, true); cb(true); },
-	usable: function(cb) {
-		var user = this.user;
-		$.ajax('../chat3/nav.php', {
-			data: {loc: 'user', who: user}, success: function(d) {
-				if (_.includes(d, 'This user does not seem to exist.'))
-					cb(false, 'The user '+user+" doesn't exist.");
-				else if (_.includes(d, 'You cannot whisper'))
-					cb(false, "You can't whisper "+user+" because you aren't friends with them.");
-				else cb(true);
-			}, timeout: 3000, dataType: 'text', error: function() { cb(true); }
-		});
+type BoxSel = [number, number, 'forward' | 'backward' | 'none'];
+class TextBox {
+	constructor(public dest: Dest) {
+		this.text = ''; this.sel = [0, 0, 'forward'];
 	}
-};
-destTypes.echo = {
-	info: function() { return 'Echo'; },
-	send: function(cb, txt) { chatMsg(txt); cb(true); },
-	usable: function(cb) { cb(true); }
-};
-destTypes.null = {
-	info: function() { return 'Null'; },
-	send: function(cb) { cb(true); },
-	usable: function(cb) { cb(true); }
-};
-destTypes.pm = {
-	info: function() {
-		if (this.tag && this.tag != this.user)
-			return 'PM '+this.tag+' ('+this.user+') - Subject: '+this.subj;
-		return 'PM '+this.user+' - Subject: '+this.subj;
-	},
-	send: function(cb, txt) {
-		var user = this.user, subj = this.subj;
-		$.ajax('../members/send_pm.php', {
-			type: 'POST', data: {
-				to: user, subject: subj, message: txt.replace(/\\\\/g, '\n'),
-				checktime: microtime(), send: 'Send'
-			}, success: function(d) {
-				if (_.includes(d, 'Your message has been sent succesfully!'))
-					cb(true, 'Your PM has been sent to '+user+'.');
-				else if (_.includes(d, 'You are currently banned'))
-					cb(false, "You can't send PMs while banned.");
-				else if (_.includes(d, " doesn't exist!")) cb(false, 'The user '+user+" doesn't exist.");
-				else if (_.includes(d, 'friends can send PMs to'))
-					cb(false, "You can't PM "+user+" because you aren't friends with them.");
-				else cb(false, 'An unknown error occurred while sending the PM to '+user+'.');
-			}, timeout: 3000, dataType: 'text',
-			error: function() { cb(false, "Plaza+ can't confirm if your PM was sent to "+user+'.'); }
-		});
-		setDest({type: 'chat'});
-	},
-	usable: function(cb) {
-		var user = this.user;
-		$.ajax('../members/send_pm.php', {
-			type: 'POST', data: {
-				to: user, subject: '', message: '', checktime: microtime(), send: 'Send'
-			}, success: function(d) {
-				if (_.includes(d, " doesn't exist!")) cb(false, 'The user '+user+" doesn't exist.");
-				else if (_.includes(d, 'friends can send PMs to'))
-					cb(false, "You can't PM "+user+" because you aren't friends with them.");
-				else cb(true, 'Type the PM message for '+user+' into the textbox.');
-			}, timeout: 3000, dataType: 'text',
-			error: function() { cb(true, 'Type the PM message for '+user+' into the textbox.'); }
-		});
-	}
-};
+	public text: string; public sel: BoxSel;
+}
 
-function aliasCmd(txt, noparam) { return function(cb, param, dest) {
+interface Dest {
+	info(): string;
+	test(preSend?: boolean): Promise<void | string>;
+	send(txt: string): Promise<void | string>;
+}
+
+class DestChat implements Dest {
+	constructor() {}
+	info() { return 'Chat'; }
+	test() { return Promise.resolve(); }
+	send(txt: string) { sendChat(txt, true); return Promise.resolve(); }
+}
+class DestWhisp implements Dest {
+	constructor(public user: string) {}
+	info() { return 'Whisper '+this.user; }
+	test() { var user = this.user; return new Promise<string>(function(ok, err) {
+		$.ajax('../chat3/nav.php', {
+			data: {loc: 'user', who: user}, success: function(d: string) {
+				if (_.includes(d, 'This user does not seem to exist.'))
+					err('The user '+user+" doesn't exist.");
+				else if (_.includes(d, 'You cannot whisper'))
+					err("You can't whisper "+user+" because you aren't friends with them.");
+				else ok();
+			}, timeout: 3000, dataType: 'text', error: function() { ok(); }
+		});
+	}); }
+	send(txt: string) { sendChat(`/whisperto ${this.user} ${txt}`, true); return Promise.resolve(); }
+}
+
+class DestEcho implements Dest {
+	info() { return 'Echo'; }
+	test() { return Promise.resolve(); }
+	send(txt: string) { chatMsg(txt); return Promise.resolve(); }
+}
+class DestNull implements Dest {
+	info() { return 'Null'; }
+	test() { return Promise.resolve(); }
+	send() { return Promise.resolve(); }
+};
+class DestPM implements Dest {
+	constructor(public user: string, public subj: string) {}
+	info() { return 'PM '+this.user+' - Subject: '+this.subj; }
+	test(pretest: boolean): Promise<void | string> {
+		if (pretest) return Promise.resolve();
+		var user = this.user;
+		return new Promise<string>(function(ok, err) {
+			this.exec('','').then(function() {
+				ok('Type the PM message for '+user+' into the textbox.');
+			}, function(msg: string) { err(msg); });
+		});
+	}
+	send(txt: string) {
+		return new Promise<string>(_.bind(function(ok, err) {
+			this.exec(this.subj, txt.replace(/\\\\/g, '\n')).then(function(stat: string) {
+				if (stat == 'unknown')
+					return err(`An unknown error occurred while sending the PM to ${user}.`);
+				if (stat == 'error')
+					return err(`Plaza+ can't confirm if your PM was sent to ${user}.`);
+				ok(`Your PM has been sent to ${this.user}.`);
+			}, function(msg: string) { err(msg); });
+		}, this));
+	}
+	private exec(subj: string, msg: string) {
+		var user = this.user;
+		return new Promise(function(ok, err) {
+			$.ajax('../members/send_pm.php', {
+				type: 'POST', data: {
+					to: user, subject: subj, message: msg, checktime: microtime(), send: 'Send'
+				}, success: function(d) {
+					if (_.includes(d, 'Your message has been sent succesfully!'))
+						ok('sent');
+					else if (_.includes(d, 'You are currently banned'))
+						err("You can't send PMs while banned.");
+					else if (_.includes(d, " doesn't exist!")) err('The user '+user+" doesn't exist.");
+					else if (_.includes(d, 'friends can send PMs to'))
+						err("You can't PM "+user+" because you aren't friends with them.");
+					else ok('unknown');
+				}, timeout: 3000, dataType: 'text',
+				error: function() { ok('error'); }
+			});
+		}); 
+	}
+}
+
+$('<div/>', {class: 'plusbtn', id: 'plusopt'}).click(function() { sendMessage('openOptions'); })
+	.append($('<div/>')).attr('title', 'Plaza+ Options').appendTo('#plusbar');
+_.times(5, function(n) {
+	var box = new TextBox(new DestChat()), title = box.dest.info();
+	boxes.push(box);
+	$('<div/>', {class: 'plusbtn', id: 'plusbtn'+n}).click(function() { setActive(n); })
+		.append('<div/>').attr('title', 'Chat').appendTo('#plusbar');
+});
+setActive(0);
+
+/*function aliasCmd(txt, noparam) { return function(cb, param, dest) {
 	parsePost(txt + (noparam ? '' : param.join(' ')), dest, cb);
-}; }
+}; }*/
+
+type Command = (param: string[], dest: Dest) => Promise<ChatMsg>;
 
 // Commands
-var commands = {};
-commands.raw = function(cb, param) { cb(param.join(' ')); };
-commands.query = function(cb, param) {
-	getUser(param.shift(), function(user) { cb('/query '+user); });
-};
-commands.ignore = function(cb, param) { getUser(param.shift(), function(user) {
-	// witty 1 liners amirite?
-	if (!user) return cb(chatErr('Please specify a user.'));
-	$.ajax('../chat3/nav.php', {
-		data: {loc: 'user', who: user}, success: function(d) {
-			var id = d.match(/'\/INTERNAL-ignore (?:\+|-) (\d+)';/);
-			if (_.includes(d, 'This user does not seem to exist.'))
-				chatErr('The user '+user+" doesn't exist.");
-			else if (id) sendChat('/INTERNAL-ignore + ' + id[1]);
-			else chatErr('Failed to retrieve '+user+"'s member ID.");
-			cb();
-		}, timeout: 3000, dataType: 'text',
-		error: function() { cb(chatErr('Failed to retrieve '+user+"'s member ID.")); }
+var commands: Dict<Command> = {};
+commands['raw'] = (param) => Promise.resolve(param.join(' '));
+commands['query'] = (param) => new Promise(function(ok) {
+	getUser(param.shift()).then((user) => ok('/query '+user));
+});
+commands['ignore'] = (param) => new Promise(function(ok, err) {
+	getUser(param.shift()).then(function(user) {
+		// witty 1 liners amirite?
+		if (!user) return err('Please specify a user.');
+		$.ajax('../chat3/nav.php', {
+			data: {loc: 'user', who: user}, success: function(d) {
+				var id = d.match(/'\/INTERNAL-ignore (?:\+|-) (\d+)';/);
+				if (_.includes(d, 'This user does not seem to exist.'))
+					err('The user '+user+" doesn't exist.");
+				else if (id) sendChat('/INTERNAL-ignore + ' + id[1]);
+				else err('Failed to retrieve '+user+"'s member ID.");
+				ok();
+			}, timeout: 3000, dataType: 'text',
+			error: function() { err('Failed to retrieve '+user+"'s member ID."); }
+		});
 	});
-}); };
-commands.unignore = function(cb, param) { getUser(param.shift(), function(user) {
-	if (!user) return cb(chatErr('Please specify a user.'));
-	$.ajax('../chat3/nav.php', {
-		data: {loc: 'user', who: user}, success: function(d) {
-			var id = d.match(/'\/INTERNAL-ignore (?:\+|-) (\d+)';/);
-			if (_.includes(d, 'This user does not seem to exist.'))
-				chatErr('The user '+user+" doesn't exist.");
-			else if (id) sendChat('/INTERNAL-ignore - ' + id[1]);
-			else chatErr('Failed to retrieve '+user+"'s member ID.");
-			cb();
-		}, timeout: 3000, dataType: 'text',
-		error: function() { cb(chatErr('Failed to retrieve '+user+"'s member ID.")); }
+});
+commands['unignore'] = (param) => new Promise(function(ok, err) {
+	getUser(param.shift()).then(function(user) {
+		if (!user) return err('Please specify a user.');
+		$.ajax('../chat3/nav.php', {
+			data: {loc: 'user', who: user}, success: function(d) {
+				var id = d.match(/'\/INTERNAL-ignore (?:\+|-) (\d+)';/);
+				if (_.includes(d, 'This user does not seem to exist.'))
+					err('The user '+user+" doesn't exist.");
+				else if (id) sendChat('/INTERNAL-ignore - ' + id[1]);
+				else err('Failed to retrieve '+user+"'s member ID.");
+				ok();
+			}, timeout: 3000, dataType: 'text',
+			error: function() { err('Failed to retrieve '+user+"'s member ID."); }
+		});
 	});
-}); };
-commands.overraeg = aliasCmd('/raeg ' + _.repeat(':)', 20), true);
-commands['+ver'] = function(cb) {
+});
+commands['overraeg'] = (param) => Promise.resolve('/raeg ' + _.repeat(':)', 20));
+commands['+ver'] = function() {
 	var ver = chrome.runtime.getManifest().version_name;
-	cb(chatMsg('You are using Plaza+ '+ver+' (Chrome).'));
+	chatMsg('You are using Plaza+ '+ver);
+	return Promise.resolve();
 };
-commands.chat = function(cb, param) {
-	var dest = {type: 'chat'}, msg = param.join(' ');
-	if (msg) return parsePost(msg, dest, cb);
-	cb(setDest(dest));
+commands['chat'] = function(param) {
+	var dest = new DestChat(), msg = param.join(' ');
+	if (msg) return parsePost(msg, dest);
+	setDest(dest); return Promise.resolve();
 };
-commands.echo = function(cb, param) {
-	var dest = {type: 'echo'}, msg = param.join(' ');
-	if (msg) return parsePost(msg, dest, cb);
-	cb(setDest(dest));
+commands['echo'] = function(param) {
+	var dest = new DestEcho(), msg = param.join(' ');
+	if (msg) return parsePost(msg, dest);
+	setDest(dest); return Promise.resolve();
 };
-commands.whisper = function(cb, param) { getUser(param.shift(), function(user, tag) {
-	if (!user) return cb(chatErr('Please specify a user.'));
-	var dest = {type: 'whisper', tag: tag, user: user}, msg = param.join(' ');
-	if (msg) return parsePost(msg, dest, cb);
-	cb(setDest(dest));
-}); };
-commands.whisperto = commands.whisper;
+commands['whisper'] = (param) => new Promise<ChatMsg>(function(ok, err) {
+	getUser(param.shift()).then(function(user: User) {
+		if (!user) return err('Please specify a user.');
+		var dest = new DestWhisp(user.user), msg = param.join(' ');
+		if (msg) return parsePost(msg, dest).then(function(msg) { ok(msg); }, function(msg) { err(msg); });
+		setDest(dest); return ok();
+	});
+});
+commands['whisperto'] = commands['whisper'];
+/*
 commands.pm = function(cb, param) { getUser(param.shift(), function(user, tag) {
 	if (!user) return cb(chatErr('Please specify a user.'));
 	var subj = param.join(' ');
@@ -515,147 +480,135 @@ commands.sperm = function(cb, param) {
 		cb('/minipbatch '+cmd+' chat.use.v3study'+room+' '+users.join(' '));
 	});
 };
+*/
 
-function getUsers(users) {
-	return Promise.all(_.map(users, function(u) {
-		return new Promise(function(ok) { getUser(u, function(user) { ok(user); }); });
+function getUsers(users: string[]) {
+	return Promise.all(_.map(users, function(user) {
+		return getUser(user);
 	}));
 }
 
-function setDest(d) {
-	if (d) {
+function setDest(dest?: Dest) {
+	if (dest) {
 		lockAsync();
-		_.bind(destTypes[d.type].usable, d)(function(stat, info) {
-			if (info) {
-				if (stat) chatMsg(info); else chatErr(info);
-			}
-			if (stat) {
-				d.text = d.text || '';
-				d.selection = d.selection || [0, 0, 'forward'];
-				dests[active] = d;
-			}
+		dest.test().then(function(info?: string) {
+			if (info) chatMsg(info);
+			boxes[active].dest = dest;
 			freeAsync();
-		});
+		}, function(err) { chatErr(err); });
 	} else {
-		var type = destTypes[dests[active].type] || {info: _.constant('Invalid destination')};
-		$('#bericht').attr('placeholder', _.bind(type.info, dests[active]));
-		$('#plusbtn'+active).attr('title', _.bind(type.info, dests[active]));
+		$('#bericht').attr('placeholder', boxes[active].dest.info());
+		$('#plusbtn'+active).attr('title', boxes[active].dest.info());
 	}
 }
 
-function setActive(dest) {
+function setActive(dest: number) {
 	if (asyncLock > 0) return; // Guh.
-	var be = $('#bericht')[0];
-	dests[active].text = $('#bericht').val();
-	dests[active].selection = [be.selectionStart, be.selectionEnd, be.selectionDirection];
+	var be = <HTMLInputElement>$('#bericht')[0];
+	boxes[active].text = $('#bericht').val();
+	boxes[active].sel = [be.selectionStart, be.selectionEnd, be.selectionDirection];
 	active = dest; setDest();
 	$('.plusbox').removeClass('plusbox0 plusbox1 plusbox2 plusbox3 plusbox4').addClass('plusbox'+dest);
 	$('.plusbtn').removeClass('plusact');
 	$('#plusbtn'+dest).addClass('plusact');
-	$('#bericht').val(dests[dest].text).focus();
+	$('#bericht').val(boxes[dest].text).focus();
 	// dammit chrome...
-	var sel = dests[dest].selection;
-	$('#bericht')[0].setSelectionRange(sel[0], sel[1], sel[2]);
+	var sel = boxes[dest].sel;
+	be.setSelectionRange(sel[0], sel[1], sel[2]);
 }
 
-function sendChat(txt, raw) {
+function sendChat(txt: string, raw?: boolean) {
 	var old = $('#bericht').val(); $('#bericht').val(txt);
 	if (raw) oldsp(); else sp(); $('#bericht').val(old);
 }
 
-function oxford(a) {
+function oxford(a: string[]) {
 	return a.length < 3 ? _.join(a, ' and ') : _.join(_.initial(a), ', ') + ', and ' + _.last(a);
 }
 
-var emotify = require('./func/emotify.js');
+import emotify from './func/emotify';
 
-function getChat(str) {
+function getChat(str: string): string {
 	switch (_.toLower(str)) {
 		case 'v3original': case 'original': case 'orig': return 'v3original';
-		case 'v3game': case 'game': return 'v3game';
-		case 'v3red': case 'red': return 'v3red';
-		case 'v3yellow': case 'yellow': return 'v3yellow';
-		case 'v3green': case 'green': return 'v3green';
 		case 'v3rp': case 'rp': case 'rper': case 'roleplay': case 'roleplayer': return 'v3rp';
 		case 'v3rpaux': case 'rpaux': case 'auxrp': return 'v3rpaux';
 		case 'r9k': case 'robot9000': case 'r9000': case 'robot9k': return 'r9k';
-		default: return false;
+		default: return null;
 	}
 }
 
-function undoEmotes(v) {
+function undoEmotes(v: string) {
 	return v.replace(/<img src="(?:[^"]*)" alt="([^"]*)">/g, function(match, alt) {
 		return _.escape(alt);
 	});
 }
 
-function getUser(user, cb) {
+interface User { user: string; tag?: string; }
+function getUser(user: string) { return new Promise<User>(function(ok, err) {
 	var name = _.toLower(user);
-	chrome.storage.sync.get({aliases: Enums.syncDef.aliases}, function(items) {
-		var alias = items.aliases[name] || {user: user, tag: false};
-		cb(alias.user, alias.tag);
+	chrome.storage.sync.get('aliases', function(items) {
+		ok(items['aliases'][name] || {user: user});
 	});
-}
+}); }
 
-function stripHTML(v) {
+function stripHTML(v: string) {
 	return _.unescape(v.replace(/<(?:.|\n)*?>/gm, ''));
 }
 
 function lockAsync() {
 	asyncLock = asyncLock + 1;
 	if (asyncLock == 1) isFocus = $('#bericht').is(':focus');
-	$('#bericht').val(''); $('#bericht').attr('disabled', true);
+	$('#bericht').val(''); $('#bericht').prop('disabled', true);
 	$('#bericht').attr('placeholder', 'Please wait...');
 }
 
 function freeAsync() {
 	asyncLock = Math.max(asyncLock - 1, 0);
 	if (asyncLock > 0) return;
-	$('#bericht').attr('disabled', false); setDest();
+	$('#bericht').prop('disabled', false); setDest();
 	if (isFocus) $('#bericht').focus();
 }
 
-function parsePost(txt, dest, cb) {
+type ChatMsg = ChatLine | string | void;
+type ChatLine = {txt?: string, dest?: Dest};
+function parsePost(txt: string, dest?: Dest): Promise<ChatLine> {
 	var param = txt.split(' '), cmd = param.shift();
-	if (cmd.charAt(0) != '/') return cb(emotify(txt), dest);
+	if (cmd.charAt(0) != '/') return Promise.resolve({txt: emotify(txt), dest: dest});
 	cmd = _.toLower(cmd.substr(1));
-	try {
-		(commands[cmd] || function(cb) { cb(emotify(txt)); })(function(txt, dst) {
-			cb(txt, dst || dest);
-		}, param, dest);
-	} catch (e) { console.error(e); cb(chatErr(String(e))); }
+	if (!commands[cmd]) {
+		return Promise.resolve({txt: txt, dest: dest});
+	}
+	return new Promise(function(ok, err) {
+		commands[cmd](param, dest).then(function(chat?: ChatMsg) {
+			if (!chat) chat = {};
+			if (_.isString(chat)) chat = {txt: <string>chat};
+			var line = <ChatLine>chat;
+			if (!line.dest) line.dest = dest;
+			ok(line);
+		}, function(msg) { err(msg); });
+	});
 }
 
 function sp() {
 	var txt = $('#bericht').val(); if (!txt) return;
 	lockAsync();
-	parsePost(txt, dests[active], function(txt, dest) {
+	parsePost(txt, boxes[active].dest).then(function(ret) {
+		var txt = ret.txt, dest = ret.dest;
 		if (!txt) return freeAsync();
-		var type = destTypes[dest.type] || {
-			usable: function(cb) {
-				cb(false, 'Invalid destination. This should not be possible...');
-			}
-		};
-		_.bind(type.usable, dest)(function(stat, info) {
-			if (info) {
-				if (stat) chatMsg(info); else chatErr(info);
-			}
-			if (stat)
-				_.bind(type.send, dest)(function(stat, info) {
-					if (info) {
-						if (stat) chatMsg(info); else chatErr(info);
-					}
-					freeAsync();
-				}, txt);
-			else return freeAsync();
-		});
+		dest.test(true).then(function(msg?: string) {
+			if (msg) chatMsg(msg);
+			dest.send(txt).then(function(msg?: string) {
+				if (msg) chatMsg(msg); freeAsync();
+			}, function(msg) { chatErr(msg); console.log(msg); freeAsync(); });
+		}, function(msg) { chatErr(msg); console.log(msg); freeAsync(); });
 	});
 }
 
-var colorLerp = require('./func/colorLerp.js');
-var parseColor = require('./func/parseColor.js');
-var parseSeg = require('./func/parseSeg.js');
-var parseCspl = require('./func/parseCspl.js');
+import colorLerp from './func/colorLerp';
+import parseColor from './func/parseColor';
+import parseSeg from './func/parseSeg';
+import parseCspl from './func/parseCspl';
 
 $('#send').attr({'onclick': null}).click(function() { sp(); });
 $('#bericht').attr({'onkeypress': null}).keydown(function(e) {
@@ -675,100 +628,96 @@ $('#bericht').attr({'onkeypress': null}).keydown(function(e) {
 	return false;
 }).on('input', function() {
 	if (!_.startsWith($('#bericht').val(), '/cspl conf ')) return;
-	var val = $('#bericht').val(), sel = $('#bericht')[0].selectionStart;
+	var val = $('#bericht').val(), sel = (<HTMLInputElement>$('#bericht')[0]).selectionStart;
 	var end = val.substr(sel - 1, 1);
 	if (end != ' ' && end != '\\') return;
 	if (end == '\\') val = val.substr(0, sel-1) + val.substr(sel);
 	var csp = parseCspl(val.substr(11), sel - 11);
 	var spc = val != '/cspl conf ' && val.substr(-1) == ' ';
 	$('#bericht').val('/cspl conf ' + _.trim(csp[0]) + (spc ? ' ' : ''));
-	if (csp[1]) $('#bericht')[0].setSelectionRange(csp[2] + 12, csp[2] + 12);
+	if (csp[1]) (<HTMLInputElement>$('#bericht')[0]).setSelectionRange(csp[2] + 12, csp[2] + 12);
 });
-$('<div/>', {'class': 'plusbtn', id: 'plusopt'}).click(function() { sendMessage('openOptions'); })
-	.append($('<div/>')).attr('title', 'Plaza+ Options').appendTo('#plusbar');
-_.times(5, function(n) {
-	dests[n] = {type: 'chat', text: '', selection: [0, 0, 'forward']};
-	$('<div/>', {'class': 'plusbtn', id: 'plusbtn'+n}).click(function() { setActive(n); })
-		.append($('<div/>')).attr('title', 'Chat').appendTo('#plusbar');
-});
-setActive(0);
 
-var chatCache = false, chatCheck = 0;
+var chatCache: string = null, chatCheck = 0;
 var chatRead = _.throttle(function() {
 	var html = $('#demo').html();
 	if (chatCache == html) return;
-	var brarray = html.split('<!--d-->'), whisp = false;
+	var brarray = html.split('<!--d-->'), whisp: string = null;
 	if (brarray[0].substr(0, 9) == 'undefined') {
 		setTimeout(function() { chatErr('Failed to retrieve messages.'); }, 0);
 		brarray[0] = brarray[0].substr(9);
 	}
 	var res = _.map(_.take(brarray, 75), function(v) {
-		if (!_.includes(v, '<!--plused-->')) {
-			var user = v.match(/(?:<b><u(?: oncontextmenu="[^"]+")?>(?:<span style="font-size: 85%;">(?:\[(?:.+)\] )?)?(.+?)(?:<\/span> as (?:.*?))?:?<\/u><\/b>)/);
-			var name = user ? _.trim(stripHTML(user[1])) : false;
-			var idCheck = v.match(/<!---cmid:(\d+)-->/);
-			idCheck = idCheck ? idCheck[1] : -1; user = name;
-			var msg = undoEmotes(v.replace(/<span style="color: (.*?)<\/u><\/b><\/span>/, ''));
-			msg = _.trim(_.trim(stripHTML(msg)));
-			var whisper = /<span style="font-size: 75%; background-color: cyan; opacity: 0\.75; color: blue;">to ([^<]+)<\/span>/;
-			whisper = v.match(whisper); whisper = whisper ? whisper[1] : false;
-			var warnCheck = v.match(/<span style="color: red;"><u>(! Warning (?:[^<]*) !)<\/u><\/span>/);
-			if (warnCheck) msg = _.trim(stripHTML(undoEmotes(warnCheck[1])));
-			var enc = false; warnCheck = !!warnCheck;
-			if (whisper) msg = _.trim(msg.replace(new RegExp('to '+_.escapeRegExp(whisper)+'$'), ''));
-			if (msg.match(/^###ascii###( \d+)+$/)) (function() {
-				var reg = /(\d+)+/g, chr; enc = '';
-				while ((chr = reg.exec(msg)) !== null) enc += String.fromCharCode(chr[1]);
-				msg = enc; enc = true;
-			})();
-			var nregex = _.map(_.compact(_.split(notifyNames, ' ')), _.escapeRegExp);
-			nregex = '(' + _.join(nregex, '|') + ')';
-			nregex = nregex != "()" ? msg.match(new RegExp(nregex, 'i')) : false;
-			name = user ? _.toLower(user) : false;
-			var fay = name == 'fayne_aldan' && (whisper == 'you' || !whisper);
-			if (whisper == 'you' && user && !whisp) whisp = user;
-			if (idCheck > chatCheck) {
-				if (enc)
-					setTimeout(function() {
-						chatMsg('Chat' + (user ? ' from '+user : '') + ' decrypted: '+msg);
-					}, 0);
-				if (mainTab && chatCache) {
-					if (idCheck == -1) {} // Don't notify.
-					else if (fay && _.includes(msg, '!+check')) (function() {
-						var vers = chrome.runtime.getManifest().version_name;
-						sendChat('/whisperto '+user+' Plaza+ ' + vers + ' (Chrome)', true);
-					})();
-					else if (whisper == 'you' && notifyWhispers)
-						sendMessage('notify', 'whisper', {user: user, msg: msg, warn: warnCheck});
-					else if (nregex)
-						sendMessage('notify', 'mention', {user: user, msg: msg, warn: warnCheck});
-				}
+		if (_.includes(v, '<!--plused-->')) return v;
+		var uRegex = v.match(/(?:<b><u(?: oncontextmenu="[^"]+")?>(?:<span style="font-size: 85%;">(?:\[(?:.+)\] )?)?(.+?)(?:<\/span> as (?:.*?))?:?<\/u><\/b>)/);
+		var name = uRegex ? _.trim(stripHTML(uRegex[1])) : null;
+		var idRegex = v.match(/<!---cmid:(\d+)-->/);
+		var idCheck: number = _.toInteger(idRegex ? idRegex[1] : -1);
+		var user = name;
+		var msg = undoEmotes(v.replace(/<span style="color: (.*?)<\/u><\/b><\/span>/, ''));
+		msg = _.trim(_.trim(stripHTML(msg)));
+		var wRegex = v.match(/<span style="font-size: 75%; background-color: cyan; opacity: 0\.75; color: blue;">to ([^<]+)<\/span>/);
+		var whisper = wRegex ? wRegex[1] : null;
+		var warnRegex = v.match(/<span style="color: red;"><u>(! Warning (?:[^<]*) !)<\/u><\/span>/);
+		if (warnRegex) msg = _.trim(stripHTML(undoEmotes(warnRegex[1])));
+		var enc = false, warnCheck = !!warnRegex;
+		if (whisper) msg = _.trim(msg.replace(new RegExp('to '+_.escapeRegExp(whisper)+'$'), ''));
+		if (msg.match(/^###ascii###( \d+)+$/)) (function() {
+			var reg = /(\d+)+/g, chr: RegExpExecArray; var en = '';
+			while ((chr = reg.exec(msg)) !== null) en += String.fromCharCode(_.toNumber(chr[1]));
+			msg = en; enc = true;
+		})();
+		var nregex = '(' + _.join(_.map(_.compact(_.split(notifyNames, ' ')), _.escapeRegExp), '|') + ')';
+		var ment = nregex != "()" ? !!msg.match(new RegExp(nregex, 'i')) : false;
+		name = user ? _.toLower(user) : null;
+		var fay = name == 'fayne_aldan' && (whisper == 'you' || !whisper);
+		if (whisper == 'you' && user && !whisp) whisp = user;
+		if (idCheck > chatCheck) {
+			if (enc)
+				setTimeout(function() {
+					chatMsg('Chat' + (user ? ' from '+user : '') + ' decrypted: '+msg);
+				}, 0);
+			if (mainTab && chatCache) {
+				if (idCheck == -1) {} // Don't notify.
+				else if (fay && _.includes(msg, '!+check')) (function() {
+					var vers = chrome.runtime.getManifest().version_name;
+					sendChat(`/whisperto ${user} Using Plaza+ ${vers}`, true);
+				})();
+				else if (whisper == 'you' && notifyWhispers)
+					sendMessage('notify', 'whisper', {user: user, msg: msg, warn: warnCheck});
+				else if (ment)
+					sendMessage('notify', 'mention', {user: user, msg: msg, warn: warnCheck});
 			}
-			if (name) {
-				var i = 'class="plusicon"';
-				if (icons[name]) i += ' src="' + icons[name] + '"';
-				var b = 'chatline';
-				if (focusList.length > 0 && !_.includes(_.map(focusList, _.toLower), name)) b += ' blur';
-				v = '<!--plused-->'+v.replace(/^<div>/, '<div class="'+b+'" user="'+name+'"><img '+i+'> ');
-			} else v = '<!--plused-->' + v;
+		} else if (idCheck == chatCheck) {
+			return '';
 		}
+		if (name) {
+			var i = 'class="plusicon"';
+			if (icons[name]) i += ' src="' + icons[name] + '"';
+			var b = 'chatline';
+			if (focusList.length > 0 && !_.includes(_.map(focusList, _.toLower), name)) b += ' blur';
+			v = '<!--plused-->'+v.replace(/^<div>/, '<div class="'+b+'" user="'+name+'"><img '+i+'> ');
+		} else v = '<!--plused-->' + v;
 		if (_.includes(v, '<script')) return v;
 		return linker.link(v);
 	});
 	if (whisp) lastWhisp = whisp;
 	chatCache = _.join(res, '<!--d-->'); var idCheck = chatCache.match(/<!---cmid:(\d+)-->/);
-	if (idCheck) chatCheck = idCheck[1];
+	if (idCheck) chatCheck = _.toNumber(idCheck[1]);
 	$('#demo').html(chatCache);
 });
 chatRead(); new MutationObserver(chatRead).observe($('#demo')[0], {childList: true});
 
-var onlineList = {}, onlineCache = false;
-var onlineTime = [0,0,0], onlineTimer = false;
+interface OnlineUser {
+	user: string, cspl: string[], conf: string, rank: string, away: boolean, timeout: boolean, ignore: boolean
+}
+var onlineList: Dict<OnlineUser> = {}, onlineCache: string | boolean = null;
+var onlineTime: [number, number, number] = [0,0,0], onlineTimer: number = null;
 var onlineRead = _.throttle(function() {
 	var html = $('#online').html();
 	if (onlineCache == html) return;
 	if (onlineCache === true) return;
-	var brarray = html.split('<br>'), online = {};
+	var brarray = html.split('<br>'), online: Dict<OnlineUser> = {};
 	var time = brarray.shift(); brarray.shift();
 	onlineTime = [+time.substr(0, 2), +time.substr(3, 2), +time.substr(6, 2)];
 	if (onlineTimer) window.clearInterval(onlineTimer);
@@ -776,17 +725,18 @@ var onlineRead = _.throttle(function() {
 	if (html.match(/Warning:/)) online = onlineList;
 	else
 		_.each(_.initial(brarray), function(v) {
-			var rank = v.match(/background-color: ([a-z]+);/);
-			if (rank)	rank = (function(){ switch (rank[1]) {
+			var rReg = v.match(/background-color: ([a-z]+);/);
+			var rank: string = 'normal';
+			if (rReg) rank = (function(){ switch (rReg[1]) {
 				case 'cyan': return 'noob';
 				case 'lime': return 'mod';
 				case 'red': return 'banned';
 				case 'black': return 'ignored';
 				default: return 'normal';
-			}})(); else rank = 'normal';
+			}})();
 			var away = !!v.match(/opacity: 0.5;/), ignore = !!v.match(/<s>/);
 			var to = !!v.match(/<img src="http:\/\/3dsplaza\.com\/global\/chat3\/to\.gif" alt="\[TO]">/);
-			var user = '', cspl = [], conf = [], c = '';
+			var user = '', cspl: string[] = [], conf: string[] = [], c: RegExpExecArray;
 			var regex = /<span style="color:\s?(#?[A-Za-z0-9]*);">(.+?)<\/span>/g;
 			while ((c = regex.exec(v)) !== null) {
 				user += c[2];
@@ -795,9 +745,9 @@ var onlineRead = _.throttle(function() {
 					conf.push(c[2][i]+'='+tinycolor(c[1]).toHexString());
 				});
 			}
-			conf = conf.join(' ');
+			var csp = conf.join(' ');
 			online[_.toLower(user)] = {
-				user: user, cspl: cspl, conf: conf, rank: rank, away: away, timeout: to, ignore: ignore
+				user: user, cspl: cspl, conf: csp, rank: rank, away: away, timeout: to, ignore: ignore
 			};
 		});
 	onlineList = online;
@@ -813,9 +763,9 @@ function onlineUpd() {
 			if (time[0] == 24) time[0] = 0;
 		}
 	}
-	time = _.map(time, function(v) { return ('0'+v).substr(-2); }).join(':');
+	var tm = _.map(time, function(v) { return ('0'+v).substr(-2); }).join(':');
 	onlineCache = true;
-	$('#onlineTime').text(time);
+	$('#onlineTime').text(tm);
 	onlineCache = $('#online').html();
 }
 function onlineWrite() {
@@ -827,7 +777,7 @@ function onlineWrite() {
 			text: _.map(onlineTime, function(v) { return ('0'+v).substr(-2); }).join(':')
 		})
 	);
-	function entry(user, div) {
+	function entry(user: OnlineUser, div: JQuery) {
 		var udiv = $('<div/>').appendTo(div);
 		var clr = (function() { switch (user.rank) {
 			case 'noob': return colorNoob;
@@ -855,8 +805,9 @@ function onlineWrite() {
 			name.append($('<span/>', {text: colors.shift(), css: {color: colors.join('=')}}));
 		});
 	}
-	function section(id, title) {
-		var div = '#online';
+	function section(id: string, title?: string) {
+		var div = $('#online');
+		if (!group[id]) return;
 		if (title) {
 			$('<div/>', {text: title, 'class': 'onlinehead'}).appendTo('#online');
 			div = $('<div/>').appendTo('#online');
@@ -868,22 +819,20 @@ function onlineWrite() {
 		return r == 'mod' ? 'mod' : r == 'banned' ? 'banned' : 'normal';
 	});
 	if (onlineSort) {
-		if (group.mod) {
-			section('mod', 'Chat Mods');
-			if (group.normal) section('normal', 'Normal Users');
-		} else if (group.normal) section('normal');
-		if (group.banned) section('banned', 'Banned Users');
-	} else _.each(onlineList, entry);
+		section('mod', 'Chat Mods');
+		section('normal', 'Normal Users');
+		section('banned', 'Banned Users');
+	} else _.each(onlineList, _.partial(entry, _, $('#online')));
 	onlineCache = $('#online').html();
 }
 new MutationObserver(onlineRead).observe($('#online')[0], {childList: true});
 
 // emoticon picker
-function appendToTextbox(text){
-	var be = $('#bericht')[0], start = be.selectionStart, end = be.selectionEnd;
+function appendToTextbox(text: string){
+	var be = <HTMLInputElement>$('#bericht')[0], start = be.selectionStart, end = be.selectionEnd;
 	var txt = $('#bericht').val(), range = start + text.length;
 	$('#bericht').val(txt.substring(0, start) + text + txt.substr(end)).focus();
-	be.setSelectionRange(range, range, 'none');
+	be.setSelectionRange(range, range);
 }
 
 var emoticons = {
@@ -957,15 +906,14 @@ $('body').append(
 	})
 );
 
-function uploadToImgur(file) {
+function uploadToImgur(file: File) {
 	var fd = new FormData(); fd.append('image', file);
 	var xhr = $.ajax('https://api.imgur.com/3/image.json', {
 		type: 'POST', data: fd, processData: false, contentType: false,
 		headers: {Authorization: 'Client-ID 0609f1f5d0e4a2b'}, dataType: 'json',
 		xhr: function() {
-			// trick to get the progress event in jQuery ajax
-			var xhr = new window.XMLHttpRequest();
-			xhr.upload.addEventListener('progress', function(evt) {
+			var xhr = new XMLHttpRequest();
+			xhr.upload.addEventListener('progress', function(evt: ProgressEvent) {
 				$('#plus_imgurUploadingBarPercentage').css('width', Math.round(evt.loaded / evt.total * 100) + '%');
 			}, false);
 			return xhr;
@@ -988,7 +936,7 @@ function uploadToImgur(file) {
 
 	$('body').append(
 		$('<div/>', {id: 'plus_imgurUploading', text: 'Uploading to Imgur...'}).append(
-			$('<div/>', {id: 'plus_imgurUploadingBar'}).html(
+			$('<div/>', {id: 'plus_imgurUploadingBar'}).html('').append(
 				$('<div/>', {id: 'plus_imgurUploadingBarPercentage'})
 			),
 			$('<div/>', {id: 'plus_imgurCancelUpload', text: 'Cancel'}).click(function() {
@@ -998,10 +946,10 @@ function uploadToImgur(file) {
 	);
 }
 
-$('#plus-imgurUploadInput').change(function() { uploadToImgur($(this)[0].files[0]); });
+$('#plus-imgurUploadInput').change(function() { uploadToImgur((<HTMLInputElement>$(this)[0]).files[0]); });
 
 $(document).on('paste', function(evt) {
-	var items = (evt.clipboardData || evt.originalEvent.clipboardData).items, blob = null;
+	var items = (<ClipboardEvent>evt.originalEvent).clipboardData.items, blob: File = null;
 	_.each(items, function(item) { if (_.startsWith(item.type, 'image')) blob = item.getAsFile(); });
 
 	if (blob) {
