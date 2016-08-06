@@ -175,7 +175,10 @@ chrome.storage.onChanged.addListener(function(changes, space) {
 
 $('#save').click(function() {
 	var items: Dict<any> = {}; _.each(savers, function(func, k) { items[k] = func(); });
-	chrome.storage.sync.set(items);
+	chrome.storage.sync.set(items, function() {
+		if (chrome.runtime.lastError) return;
+		$('#success').show().fadeOut('slow');
+	});
 });
 $('#reset').click(function() { $('#footer').hide(); $('#resetConfirm').show(); });
 $('#resetNo').click(function() { $('#footer').show(); $('#resetConfirm').hide(); });
