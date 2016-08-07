@@ -712,9 +712,7 @@ var chatRead = _.throttle(function() {
 				else if (ment)
 					sendMessage('notify', 'mention', {user: user, msg: msg, warn: warnCheck});
 			}
-		} else if (idCheck == chatCheck) {
-			return '';
-		}
+		} else if (idCheck <= chatCheck) return '';
 		if (name) {
 			var i = 'class="plusicon"';
 			if (icons[name]) i += ' src="' + icons[name] + '"';
