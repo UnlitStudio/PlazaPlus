@@ -180,14 +180,14 @@ class DestPM implements Dest {
 		});
 	}
 	send(txt: string) {
-		var exec = this.exec, subj = this.subj, user = this.user;
+		var t = this;
 		return new Promise<string>(function(ok, err) {
-			exec(subj, txt.replace(/\\\\/g, '\n')).then(function(stat: string) {
+			t.exec(t.subj, txt.replace(/\\\\/g, '\n')).then(function(stat: string) {
 				if (stat == 'unknown')
-					return err(`An unknown error occurred while sending the PM to ${user}.`);
+					return err(`An unknown error occurred while sending the PM to ${t.user}.`);
 				if (stat == 'error')
-					return err(`Plaza+ can't confirm if your PM was sent to ${user}.`);
-				ok(`Your PM has been sent to ${user}.`);
+					return err(`Plaza+ can't confirm if your PM was sent to ${t.user}.`);
+				ok(`Your PM has been sent to ${t.user}.`);
 			}, function(msg: string) { err(msg); });
 		});
 	}
@@ -285,9 +285,9 @@ commands['echo'] = function(param) {
 	setDest(dest); return Promise.resolve();
 };
 commands['whisper'] = (param) => new Promise<ChatMsg>(function(ok, err) {
-	getUser(param.shift()).then(function(user: User) {
+	getUser(param.shift()).then(function(user) {
 		if (!user) return err('Please specify a user.');
-		var dest = new DestWhisp(user.user), msg = param.join(' ');
+		var dest = new DestWhisp(user), msg = param.join(' ');
 		if (msg) return parsePost(msg, dest).then(function(msg) { ok(msg); }, function(msg) { err(msg); });
 		setDest(dest); return ok();
 	});
@@ -546,10 +546,12 @@ function undoEmotes(v: string) {
 }
 
 interface User { user: string; tag?: string; }
-function getUser(user: string) { return new Promise<User>(function(ok, err) {
+function getUser(user: string) { return new Promise<string>(function(ok, err) {
 	var name = _.toLower(user);
 	chrome.storage.sync.get('aliases', function(items) {
-		ok(items['aliases'][name] || {user: user});
+		var usr = items['aliases'][name];
+		if (!usr) return ok(user);
+		ok(usr.user);
 	});
 }); }
 
