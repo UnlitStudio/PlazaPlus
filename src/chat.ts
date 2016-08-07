@@ -40,7 +40,7 @@ function microtime() {
 	var now = _.now() / 1000, s = parseInt(String(now), 10);
 	return (Math.round((now - s) * 1000) / 1000) + ' ' + s;
 }
-interface Alias { name: string; tag: string; }
+interface Alias { user: string; tag: string; }
 
 var chatroom = (/\?room=(.*)/.exec($('.contain_inside form').attr('action')) || ['','v3original'])[1];
 var port = chrome.runtime.connect({name: 'chat:'+chatroom}), mainTab = false;
@@ -293,99 +293,108 @@ commands['whisper'] = (param) => new Promise<ChatMsg>(function(ok, err) {
 	});
 });
 commands['whisperto'] = commands['whisper'];
-/*
-commands.pm = function(cb, param) { getUser(param.shift(), function(user, tag) {
-	if (!user) return cb(chatErr('Please specify a user.'));
-	var subj = param.join(' ');
-	if (!subj) return cb(chatErr('Please specify a subject.'));
-	var dest = {type: 'pm', user: user, subj: emotify(subj).substr(0, 50)};
-	cb(setDest(dest));
-}); };
-commands.alias = function(cb, param) {
+commands['pm'] = (param) => new Promise<ChatMsg>(function(ok, err) {
+	getUser(param.shift()).then(function(user) {
+		if (!user) return err('Please specify a user.');
+		var subj = param.join(' ');
+		if (!subj) return err('Please specify a subject.');
+		var dest = new DestPM(user, emotify(subj).substr(0, 50));
+		setDest(dest); return ok();
+	});
+});
+commands['alias'] = function(param) {
 	var tag = param.shift(), user = param.shift(), name = _.toLower(tag || '');
-	if (!tag)
-		return cb(chatMsg(
-			aliases.length ?
-				'Aliases: ' + oxford(_.map(aliases, _.template('<%= tag %> is <%= user %>'))) :
-			'No aliases are set.'
-		));
-	else if (user) {
+	if (!tag) {
+		chatMsg(
+			_.isEmpty(aliases) ? 'No aliases are set.' :
+			'Aliases: ' + oxford(_.map(aliases, _.template('<%= tag %> is <%= user %>')))
+		); return Promise.resolve();
+	} else if (user) {
 		aliases[name] = {tag: tag, user: user}; chatMsg('Alias '+tag+' has been set to '+user+'.');
 	} else if (aliases[name]) {
 		delete aliases[name]; chatMsg('Alias '+tag+' has been deleted.');
-	} else return cb(chatMsg('Alias '+tag+' is not set.'));
-	chrome.storage.sync.set({aliases: aliases}, function() {
-		if (chrome.runtime.lastError) chatErr('Failed to save aliases: ' + chrome.runtime.lastError);
-		cb();
-	});
-};
-commands.room = function(cb, param) {
-	var room = param.shift();
-	if (!room) return cb(chatErr('Please specify a chatroom.'));
-	var chat = getChat(room);
-	if (!chat) return cb(chatErr(room+' is not a valid chatroom.'));
-	window.open('chat.php?room='+chat, '_top');
-	$('#bericht').attr('placeholder', 'Switching chatrooms...');
-};
-commands.transfer = function(cb, param) {
-	var amt = param.shift();
-	if (!amt) return cb(chatErr('Please specify an amount of points to transfer.'));
-	getUser(param.shift(), function(user) {
-		if (!user) return cb(chatErr('Please specify a user to transfer points to.'));
-		$.ajax('/apps/points_transfer/transfer_process.php', {
-			type: 'POST', data: {amount: amt, to: user, checktime: microtime()}, success: function(d) {
-				if (_.includes(d, 'You cannot transfer points to yourself!'))
-					cb(chatErr('Are you trying to be greedy? Give those points to someone else!'));
-				else if (_.includes(d, 'The user you entered doesnt exist!'))
-					cb(chatErr('The user '+name+" doesn't exist."));
-				else if (
-					_.includes(d, 'You dont have enough points to transfer!') ||
-					_.includes(d, 'bigger than the amount you can transfer!')
-				) cb(chatErr("You're not a wizard. No transferring points you don't have."));
-				else if (_.includes(d, 'You can only send whole points'))
-					cb(chatErr("Points aren't cookies. They must be given whole."));
-				else if (_.includes(d, 'You havent entered the amount to transfer'))
-					cb(chatErr("Why enter this command if you're not transferring any points?"));
-				else if (_.includes(d, 'You can not transfer less than 1 point!'))
-					cb(chatErr("Don't make me divide by 0!"));
-				else if (_.includes(d, 'The ammount of points you entered is not a number'))
-					cb(chatErr("Woah! That's a number now?! :O"));
-				else if (_.includes(d, 'Successfully transferred'))
-					cb(chatMsg('Successfully transferred '+amt+' point'+(amt>1?'s':'')+' to '+user+'!'));
-				else cb(chatErr('An error occurred while transferring.'));
-			}, timeout: 3000, dataType: 'text', error: function() {
-				cb(chatMsg("Plaza+ can't confirm that the point transfer was successful."));
-			}
+	} else {
+		chatMsg('Alias '+tag+' is not set.'); return Promise.resolve();
+	}
+	return new Promise(function(ok, err) {
+		chrome.storage.sync.set({aliases: aliases}, function() {
+			if (chrome.runtime.lastError) return err('Failed to save aliases: ' + chrome.runtime.lastError);
+			ok();
 		});
 	});
 };
-commands.slap = function(cb, param) {
-	var item = _.sample(['fish','gym sock','skunk','diaper','cheese wedge']);
-	cb('/me slaps '+param.join(' ')+' with a smelly '+item+'.');
+commands['room'] = function(param) {
+	var room = param.shift();
+	if (!room) return Promise.reject('Please specify a chatroom.');
+	var chat = getChat(room);
+	if (!chat) return Promise.reject(room+' is not a valid chatroom.');
+	window.open('chat.php?room='+chat, '_top');
+	chatMsg('Attempting to switch chatrooms...');
+	return Promise.resolve();
 };
-commands.rptag = function(cb, param) {
+commands['transfer'] = function(param) {
+	var amt = param.shift();
+	if (!amt) return Promise.reject('Please specify an amount of points to transfer.');
+	return new Promise(function(ok, err) {
+		getUser(param.shift()).then(function(user) {
+			if (!user) return err('Please specify a user to transfer points to.');
+			$.ajax('/apps/points_transfer/transfer_process.php', {
+				type: 'POST', data: {amount: amt, to: user, checktime: microtime()}, success: function(d) {
+					if (_.includes(d, 'You cannot transfer points to yourself!'))
+						err('Are you trying to be greedy? Give those points to someone else!');
+					else if (_.includes(d, 'The user you entered doesnt exist!'))
+						err('The user '+name+" doesn't exist.");
+					else if (
+						_.includes(d, 'You dont have enough points to transfer!') ||
+						_.includes(d, 'bigger than the amount you can transfer!')
+					) err("You're not a wizard. No transferring points you don't have.");
+					else if (_.includes(d, 'You can only send whole points'))
+						err("Points aren't cookies. They must be given whole.");
+					else if (_.includes(d, 'You havent entered the amount to transfer'))
+						err("Why enter this command if you're not transferring any points?");
+					else if (_.includes(d, 'You can not transfer less than 1 point!'))
+						err("Don't make me divide by 0!");
+					else if (_.includes(d, 'The ammount of points you entered is not a number'))
+						err("Woah! That's a number now?! :O");
+					else if (_.includes(d, 'Successfully transferred'))
+						err(`Successfully transferred ${amt} point${amt=='1'?'':'s'} to ${user}!`);
+					else err('An error occurred while transferring.');
+				}, timeout: 3000, dataType: 'text', error: function() {
+					err("Plaza+ can't confirm that the point transfer was successful.");
+				}
+			});
+		});
+	});
+};
+commands['slap'] = function(param) {
+	var item = _.sample(['fish','gym sock','skunk','diaper','cheese wedge']);
+	return Promise.resolve(`/me slaps ${param.join(' ')} with a smelly ${item}.`);
+};
+commands['rptag'] = (param) => new Promise(function(ok, err) {
 	var tag = param.join(' ');
 	if (!tag)
 		$.ajax('../chat3/nav.php?loc=rptags&drop=', {
 			success: function(d) {
-				if (_.includes(d, '<br>Dropped<br>')) cb(chatMsg('Your RP tag has been dropped.'));
-				else cb(chatErr('An error occurred while trying to drop your RP tag.'));
+				if (_.includes(d, '<br>Dropped<br>')) {
+					chatMsg('Your RP tag has been dropped.'); ok();
+				} else err('An error occurred while trying to drop your RP tag.');
 			}, timeout: 3000, dataType: 'text',
-			error: function() { cb(chatMsg("Plaza+ can't confirm that your RP tag was dropped.")); }
+			error: function() { chatMsg("Plaza+ can't confirm that your RP tag was dropped."); ok(); }
 		});
-	else if (tag.length < 2) cb(chatErr('RP tags must be at least 2 characters long.'));
-	else if (tag.length > 15) cb(chatErr("RP tags can't be over 15 characters long."));
+	else if (tag.length < 2) err('RP tags must be at least 2 characters long.');
+	else if (tag.length > 15) err("RP tags can't be over 15 characters long.");
 	else
 		$.ajax('../chat3/nav.php?loc=rptags', {
 			type: 'POST', data: {play: '', role: tag, set: 'Set RP tags'}, success: function(d) {
-				if (_.includes(d, '<br>Set<br>')) cb(chatMsg('Your RP tag has been set to '+tag+'.'));
-				else cb(chatErr('An error occurred while trying to set your RP tag.'));
+				if (_.includes(d, '<br>Set<br>')) {
+					chatMsg(`Your RP tag has been set to ${tag}.`); ok();
+				} else err('An error occurred while trying to set your RP tag.');
 			}, timeout: 3000, dataType: 'text',
-			error: function() { cb(chatMsg("Plaza+ can't confirm that your RP tag was set.")); }
+			error: function() { chatMsg("Plaza+ can't confirm that your RP tag was set."); ok(); }
 		});
-};
-commands.focus = function(cb, param) {
-	var focused = [], blurred = [], action = param.shift();
+});
+commands['focus'] = (param) => new Promise(function(ok, err) {
+	var focused: string[] = [], blurred: string[] = [], action = param.shift();
 	function icb() {
 		$('#pluscss2').text((function() { switch (focusMode) {
 			case 'blur': return '.blur{filter:blur(1px);-webkit-filter:blur(1px)}.blur:hover{filter:initial;-webkit-filter:initial}';
@@ -393,20 +402,22 @@ commands.focus = function(cb, param) {
 				return '.blur{font-size:8px;background-color:lightgray;display:block}.blur img{height:8px;width:auto}';
 			default: return '.blur{display:none}';
 		} })());
-		var out = [];
+		var out: string[] = [];
 		if (focused.length == 1) out.push(focused[0]+" has been focused");
 		else if (focused.length > 1) out.push(oxford(focused) + " have been focused");
 		if (blurred.length == 1) out.push(blurred[0]+" has been blurred");
 		else if (blurred.length > 1) out.push(oxford(blurred) + " have been blurred");
 		if (out.length > 0) chatMsg(oxford(out) + '.');
 		$('.chatline').each(function() {
-			if (focusList.length === 0) return $(this).removeClass('blur');
-			var user = $(this).attr('user');
-			if (!user) return $(this).addClass('blur');
-			if (_.includes(_.map(focusList, _.toLower), _.toLower(user))) $(this).removeClass('blur');
-			else $(this).addClass('blur');
+			if (focusList.length) {
+				var user = $(this).attr('user');
+				if (user) {
+					if (_.includes(_.map(focusList, _.toLower), _.toLower(user))) $(this).removeClass('blur');
+					else $(this).addClass('blur');
+				} else $(this).addClass('blur');
+			} else $(this).removeClass('blur');
 		});
-		cb();
+		ok();
 	}
 	switch (action) {
 		case 'clear': case 'reset':
@@ -429,64 +440,74 @@ commands.focus = function(cb, param) {
 			}); icb();
 		});
 	else {
-		if (focusList.length == 1) cb(chatMsg(focusList[0] + ' is currently focused.'));
-		else if (focusList.length > 1) cb(chatMsg(oxford(focusList) + ' are currently focused.'));
-		else cb(chatMsg('No users are currently focused.'));
+		if (focusList.length == 1) chatMsg(focusList[0] + ' is currently focused.');
+		else if (focusList.length > 1) chatMsg(oxford(focusList) + ' are currently focused.');
+		else chatMsg('No users are currently focused.');
+		ok();
 	}
+});
+commands['+help'] = function(param) {
+	sendMessage('openHelp', param.shift());
+	return Promise.resolve();
 };
-commands['+help'] = function(cb, param) { cb(sendMessage('openHelp', param.shift())); };
-commands.cspl = function(cb, param) {
+commands['cspl'] = (param) => new Promise(function(ok, err) {
 	var cmd = param.shift();
-	if (cmd != 'steal' && cmd != 'stealhsv') return cb('/cspl '+cmd+' '+param.join(' '));
-	getUser(param.shift(), function(user) {
-		if (!user) return cb(chatErr('Please specify a user.'));
-		getUser('Me', function(me, meh) {
-			getUser(param.shift(), function(you) {
-				if (!you && meh) you = me;
-				if (!you) return cb(chatErr('Please specify your username.'));
-				if (_.includes(you, '=')) return cb(chatErr('Please specify your username.'));
+	if (cmd != 'steal' && cmd != 'stealhsv') return ok('/cspl '+cmd+' '+param.join(' '));
+	getUser(param.shift()).then(function(user) {
+		if (!user) return err('Please specify a user.');
+		getUser('Me').then(function(me) {
+			getUser(param.shift()).then(function(you) {
+				if (!you && aliases['Me']) you = me;
+				if (!you) return err('Please specify your username.');
+				if (_.includes(you, '=')) return err('Please specify your username.');
 				var usr = onlineList[_.toLower(user)];
-				if (!usr) return cb(chatErr("Couldn't find "+user+' on the online list.'));
+				if (!usr) return err("Couldn't find "+user+' on the online list.');
 				you = you + '='; if (cmd == 'stealhsv') you = you + 'hsv:';
 				$('#bericht').val('/cspl conf ' + (parseCspl(you + usr.cspl.join('/')))[0]);
-				cb();
+				ok();
 			});
 		});
 	});
+});
+commands['reply'] = function(param, dest) {
+	if (!lastWhisp) return Promise.reject('You have not receieved any whispers recently.');
+	return parsePost('/whisper '+lastWhisp+' '+param.join(' '), dest);
 };
-commands.reply = function(cb, param, dest) {
-	if (!lastWhisp) return cb(chatErr('You have not receieved any whispers recently.'));
-	parsePost('/whisper '+lastWhisp+' '+param.join(' '), dest, cb);
-};
-commands.r = commands.reply;
-commands.help = function(cb) {
-	cb(chatMsg("Sorry. 3DSPlaza lied to you. That command doesn't exist. :("));
+commands['r'] = commands['reply'];
+commands['help'] = function() {
+	chatMsg("Sorry. 3DSPlaza lied to you. That command doesn't exist. :(");
+	return Promise.resolve();
 };
 // Get your mind out of the gutter! It's short for Study room PERMissions!
 // And no, this was not intentional. XD
-commands.sperm = function(cb, param) {
-	var cm = param.shift(), cmd = false;
+commands['sperm'] = (param) => new Promise(function(ok, err) {
+	var cm = param.shift(), cmd: string = null;
 	if (cm == 'scan' || cm == 'list') cmd = 'scan';
 	else if (cm == 'grant' || cm == 'allow' || cm == '+') cmd = 'grant';
 	else if (cm == 'revoke' || cm == 'deny' || cm == '-') cmd = 'revoke';
 	else if (cm == 'test' || cm == 'check') cmd = 'test';
-	if (!cmd) return cb(chatErr('Invalid command.'));
+	else return err('Invalid command.');
 	var room = param.shift();
 	if (!room) {
-		if (!_.startsWith(chatroom, 'v3study')) return cb(chatErr('Please specify a study room.'));
+		if (!_.startsWith(chatroom, 'v3study'))
+			return err('Please specify a study room.');
 		room = chatroom.substr(7);
 	}
-	if (cmd == 'scan') cb('/minipbatch scan chat.use.v3study'+room);
+	if (cmd == 'scan') ok('/minipbatch scan chat.use.v3study'+room);
 	else getUsers(param).then(function(users) {
-		cb('/minipbatch '+cmd+' chat.use.v3study'+room+' '+users.join(' '));
+		ok('/minipbatch '+cmd+' chat.use.v3study'+room+' '+users.join(' '));
 	});
-};
-*/
+});
 
 function getUsers(users: string[]) {
-	return Promise.all(_.map(users, function(user) {
+	// For some reason, this has to be PromiseLike<string>[]
+	// instead of Promise<string>[], otherwise getUsers will
+	// return Promise<Promise<string>[]> instead of
+	// Promise<string[]>
+	var usrs: PromiseLike<string>[] = _.map(users, function(user) {
 		return getUser(user);
-	}));
+	});
+	return Promise.all(usrs);
 }
 
 function setDest(dest?: Dest) {
