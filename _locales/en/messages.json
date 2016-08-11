@@ -4,5 +4,122 @@
 	},
 	"extDesc": {
 		"message": "Adds several new features and commands to the 3DSPlaza chatrooms."
+	},
+	"options_title": {
+		"message": "Plaza+ Options"
+	},
+	"options_tabGeneral": {
+		"message": "General Options"
+	},
+	"options_tabIcons": {
+		"message": "Custom Icons"
+	},
+	"options_tabOnline": {
+		"message": "Online List"
+	},
+	"options_tabAliases": {
+		"message": "Aliases"
+	},
+	"options_hideTabs": {
+		"message": "Hide textbox tabs"
+	},
+	"options_displayIcons": {
+		"message": "Display custom icons"
+	},
+	"options_changeIcon": {
+		"message": "Change icon"
+	},
+	"options_onlineSort": {
+		"message": "Categorize online list"
+	},
+	"options_onlineColors": {
+		"message": "Whisper Button Colors"
+	},
+	"options_colorNormal": {
+		"message": "Normal Users"
+	},
+	"options_colorNoob": {
+		"message": "New Users"
+	},
+	"options_colorMod": {
+		"message": "Chat Mods"
+	},
+	"options_colorBanned": {
+		"message": "Banned Users"
+	},
+	"options_colorIgnored": {
+		"message": "Ignoring You"
+	},
+	"options_tabNotifications": {
+		"message": "Chat Notifications"
+	},
+	"options_notifyWhispers": {
+		"message": "Notify of whispers"
+	},
+	"options_notifyNames": {
+		"message": "Notify me when somebody says:"
+	},
+	"options_notifyNamesInfo": {
+		"message": "Separate names with a space. Leave blank to disable."
+	},
+	"options_notifyIgnore": {
+		"message": "Ignore notifications from these users:"
+	},
+	"options_notifyIgnoreInfo": {
+		"message": "Separate usernames with a space."
+	},
+	"options_notifySound": {
+		"message": "Notification sound"
+	},
+	"options_notifySoundNone": {
+		"message": "(None)"
+	},
+	"options_notifyVolume": {
+		"message": "Volume"
+	},
+	"options_notifySoundTest": {
+		"message": "Test"
+	},
+	"options_notifySoundInfo": {
+		"message": "Notification sounds provided by oringz.com"
+	},
+	"options_aliasesTag": {
+		"message": "Tag"
+	},
+	"options_aliasesName": {
+		"message": "Username"
+	},
+	"options_meTip": {
+		"message": "Tip: Using your username for an alias with the \"Me\" tag will allow you to use \"/cspl steal\" without entering your username."
+	},
+	"options_savedMsg": {
+		"message": "Options saved"
+	},
+	"options_btnReset": {
+		"message": "Reset"
+	},
+	"options_btnSave": {
+		"message": "Save"
+	},
+	"options_resetMsg": {
+		"message": "Reset Plaza+? Are you sure?"
+	},
+	"options_resetNo": {
+		"message": "Cancel"
+	},
+	"options_resetYes": {
+		"message": "Reset"
+	},
+	"options_resetWait": {
+		"message": "Resetting... Please wait..."
+	},
+	"options_aliasTagEmpty": {
+		"message": "Alias tags can't be empty"
+	},
+	"options_aliasTagSpace": {
+		"message": "Alias tags can't contain spaces"
+	},
+	"options_aliasTagTaken": {
+		"message": "This alias tag is already being used"
 	}
 }

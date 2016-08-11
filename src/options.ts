@@ -5,9 +5,12 @@ import Enums from './enums';
 import {Dict} from './helpers/types';
 import './options.less';
 
-$(function(){
-
+var __ = chrome.i18n.getMessage;
 if (!chrome.storage.sync) chrome.storage.sync = chrome.storage.local;
+
+$('*[i18n]').text(function() {
+	return __('options_'+$(this).attr('i18n'));
+});
 
 function getColor(color: string) {
 	var col = /^\s*rand(om)?\s*$/i.exec(color) ? tinycolor.random() : tinycolor(color);
@@ -59,9 +62,9 @@ function checkAliases() {
 		$('#aliases .alias').each(function() {
 			if (_.toLower($(this).find('.tag input').val()) != tag) return;
 			var error =
-				!tag ? "Alias tags can't be empty" :
-				_.includes(tag, ' ') ? "Alias tags can't contain spaces" :
-				check ? "This alias tag is already being used" :
+				!tag ? __('options_aliasTagEmpty') :
+				_.includes(tag, ' ') ? __('options_aliasTagSpace') :
+				check ? __('options_aliasTagTaken') :
 				false;
 			check = true;
 			if (error) $(this).next('.error').show().find('td').text(error);
@@ -183,8 +186,7 @@ $('#save').click(function() {
 $('#reset').click(function() { $('#footer').hide(); $('#resetConfirm').show(); });
 $('#resetNo').click(function() { $('#footer').show(); $('#resetConfirm').hide(); });
 $('#resetYes').click(function() {
-	$('#resetConfirm').html('<td class="center">Please wait...</td>');
+	$('#resetConfirm').html('<td class="center">'+__('options_resetWait')+'</td>');
 	chrome.storage.sync.set(Enums.syncDef, function() { location.reload(); });
 });
 
-});

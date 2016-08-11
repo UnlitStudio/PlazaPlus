@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Plaza+ Options</title>
+	<title i18n="title"></title>
 </head>
 <body>
 
@@ -15,42 +15,42 @@
 <hr>
 
 <div id="general" style="display:block">
-	<h1>General Settings</h1>
+	<h1 i18n="tabGeneral"></h1>
 	<input type="checkbox" id="hideTabs">
-	<label for="hideTabs">Hide textbox tabs</label>
+	<label for="hideTabs" i18n="hideTabs"></label>
 </div>
 
 <div id="icons">
-	<h1>Custom Icons</h1>
+	<h1 i18n="tabIcons"></h1>
 	<input type="checkbox" id="displayIcons">
-	<label for="displayIcons">Display custom icons</label><br>
-	<button id="changeIcon">Change icon</button>
+	<label for="displayIcons" i18n="displayIcons"></label><br>
+	<button id="changeIcon" i18n="changeIcon"></button>
 </div>
 
 <div id="online">
-	<h1>Online List</h1>
+	<h1 i18n="tabOnline"></h1>
 	<input type="checkbox" id="onlineSort" checked>
-	<label for="onlineSort">Categorize online list</label><br>
-	<h2>Whisper Button Colors</h2>
+	<label for="onlineSort" i18n="onlineSort"></label><br>
+	<h2 i18n="onlineColors"></h2>
 	<table id="onlineColors">
 		<tr>
-			<td><label for="colorNormal">Normal Users</label></td>
+			<td><label for="colorNormal" i18n="colorNormal"></label></td>
 			<td style="width: 1px"><input type="text" id="colorNormal" value="#0000ff"></td>
 			<td class="preview"><div style="background-color: #0000ff"></div></td>
 		</tr><tr>
-			<td><label for="colorNoob">New Users</label></td>
+			<td><label for="colorNoob" i18n="colorNoob"></label></td>
 			<td><input type="text" id="colorNoob" value="#00ffff"></td>
 			<td class="preview"><div style="background-color: #00ffff"></div></td>
 		</tr><tr>
-			<td><label for="colorMod">Chat Mods</label></td>
+			<td><label for="colorMod" i18n="colorMod"></label></td>
 			<td><input type="text" id="colorMod" value="#00ff00"></td>
 			<td class="preview"><div style="background-color: #00ff00"></div></td>
 		</tr><tr>
-			<td><label for="colorBanned">Banned Users</label></td>
+			<td><label for="colorBanned" i18n="colorBanned"></label></td>
 			<td><input type="text" id="colorBanned" value="#ff0000"></td>
 			<td class="preview"><div style="background-color: #ff0000"></div></td>
 		</tr><tr>
-			<td><label for="colorIgnored">Ignoring You</label></td>
+			<td><label for="colorIgnored" i18n="colorIgnored"></label></td>
 			<td><input type="text" id="colorIgnored" value="#000000"></td>
 			<td class="preview"><div style="background-color: #000000"></div></td>
 		</tr>
@@ -58,23 +58,23 @@
 </div>
 
 <div id="notifications">
-	<h1>Chat Notifications</h1>
+	<h1 i18n="tabNotifications"></h1>
 	<input type="checkbox" id="notifyWhispers">
-	<label for="notifyWhispers">Notify of whispers</label><br>
+	<label for="notifyWhispers" i18n="notifyWhispers"></label><br>
 	<br>
-	<label for="notifyNames">Notify me when somebody says:</label><br>
+	<label for="notifyNames" i18n="notifyNames"></label><br>
 	<input type="text" id="notifyNames" class="block">
-	<div class="info">Separate names with a space. Leave blank to disable.</div>
+	<div class="info" i18n="notifyNamesInfo"></div>
 	<br>
-	<label for="notifyIgnore">Ignore notifications from these users:</label><br>
+	<label for="notifyIgnore" i18n="notifyIgnore"></label><br>
 	<input type="text" id="notifyIgnore" class="block">
-	<div class="info">Separate usernames with a space.</div>
+	<div class="info" i18n="notifyIgnoreInfo"></div>
 	<br>
 	<table>
 		<tr>
-			<td><label for="notifySound">Notification sound</label></td>
+			<td><label for="notifySound" i18n="notifySound"></label></td>
 			<td class="right"><select id="notifySound">
-				<option value="none">None</option>
+				<option value="none" i18n="notifySoundNone"></option>
 				<option value="isnt-it.ogg">Isn&rsquo;t it</option>
 				<option value="capisci.ogg">Capisci?</option>
 				<option value="gets-in-the-way.ogg">Gets in the way</option>
@@ -89,23 +89,23 @@
 		</tr>
 		<tr>
 			<td>
-				<label for="notifyVolume">Volume</label>
+				<label for="notifyVolume" i18n="notifyVolume"></label>
 				<input type="number" id="notifyVolume" min="0" max="100">%
 			</td>
 			<td style="text-align: right">
-				<button id="notifySoundTest">Test</button>
+				<button id="notifySoundTest" i18n="notifySoundTest"></button>
 			</td>
 		</tr>
 	</table>
-	<div class="info">Notification sounds provided by oringz.com</div>
+	<div class="info" i18n="notifySoundInfo"></div>
 </div>
 
 <div id="aliases">
-	<h1>Aliases</h1>
+	<h1 i18n="tabAliases"></h1>
 	<table>
 		<thead><tr>
-			<th>Tag</th>
-			<th>Username</th>
+			<th i18n="aliasesTag"></th>
+			<th i18n="aliasesName"></th>
 			<th style="width: 1px"></th>
 		</tr></thead>
 		<tbody id="aliases">
@@ -116,23 +116,21 @@
 			</tr>
 		</tbody>
 	</table>
-	<div id="meTip">
-	Tip: Using your username for an alias with the "Me" tag will allow you to use "/cspl steal" without entering your username.
-	</div>
+	<div id="meTip" i18n="meTip"></div>
 </div>
 <hr>
 <table id="footer"><tr>
-	<td class="left"><button id="reset" style="float:left">Reset</button></td>
-	<td class="center" id="success" style="display:none"><b>Options saved<b></td>
+	<td class="left"><button id="reset" style="float:left" i18n="btnReset"></button></td>
+	<td class="center" id="success" style="display:none"><b i18n="savedMsg"><b></td>
 	<td class="right">
-		<button id="save">Save</button>
+		<button id="save" i18n="btnSave"></button>
 	</td>
 </tr></table>
 <table id="resetConfirm" style="display:none;"><tr>
-	<td class="center">Reset Plaza+? <b>Are you sure?</b></td>
+	<td class="center" i18n="resetMsg"></td>
 	<td class="right">
-		<button id="resetNo">Cancel</button>
-		<button id="resetYes">OK</button>
+		<button id="resetNo" i18n="resetNo"></button>
+		<button id="resetYes" i18n="resetYes"></button>
 	</td>
 </tr></table>
 
