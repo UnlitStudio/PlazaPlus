@@ -41,6 +41,6 @@ module.exports = function(grunt) {
 		grunt.file.write('manifest.json', JSON.stringify(manifest));
 	});
 	
-	grunt.registerTask('default', ['clean:dev', 'manifest', 'webpack']);
-	grunt.registerTask('zip', ['clean:dist', 'default', 'uglify', 'compress']);
+	grunt.registerTask('default', ['manifest', 'webpack']);
+	grunt.registerTask('zip', ['clean', 'default', 'uglify', 'compress']);
 };

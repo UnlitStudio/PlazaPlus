@@ -12,7 +12,8 @@ module.exports = {
 
 	output: {
 		path: 'js/',
-		filename: '[name].js'
+		filename: '[name].js',
+		devtoolModuleFilenameTemplate: '/[resource-path]'
 	},
 
 	devtool: 'source-map',
