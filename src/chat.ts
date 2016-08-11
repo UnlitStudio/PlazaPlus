@@ -517,7 +517,10 @@ function setDest(dest?: Dest) {
 			if (info) chatMsg(info);
 			boxes[active].dest = dest;
 			freeAsync();
-		}, function(err) { chatErr(err); });
+		}, function(err) {
+			if (err) chatErr(err);
+			freeAsync();
+		});
 	} else {
 		$('#bericht').attr('placeholder', boxes[active].dest.info());
 		$('#plusbtn'+active).attr('title', boxes[active].dest.info());
