@@ -28,5 +28,6 @@ function cjs(v) { return [vendor(), js(v)]; }
 			js: cjs('chatNav'), all_frames: true
 		}
 	],
-	web_accessible_resources: ['res/chatInject.js', 'res/*.ogg']
+	web_accessible_resources: ['res/chatInject.js', 'res/*.ogg'],
+	applications: {gecko: {id: '@plaza-plus'}}
 })
