@@ -715,7 +715,7 @@ var chatRead = _.throttle(function() {
 				else if (ment)
 					sendMessage('notify', 'mention', {user: user, msg: msg, warn: warnCheck});
 			}
-		} else if (idCheck <= chatCheck) return '';
+		}
 		if (name) {
 			var i = 'class="plusicon"';
 			if (icons[name]) i += ' src="' + icons[name] + '"';
@@ -731,7 +731,11 @@ var chatRead = _.throttle(function() {
 	if (idCheck) chatCheck = _.toNumber(idCheck[1]);
 	$('#demo').html(chatCache);
 });
-chatRead(); new MutationObserver(chatRead).observe($('#demo')[0], {childList: true});
+new MutationObserver(chatRead).observe($('#demo')[0], {childList: true});
+// Blame Rob.
+$('#demo').html($('#demo').html().replace(
+	/<!--d--><script type="text\/javascript">lid = \d+;<\/script>/, ''
+));
 
 interface OnlineUser {
 	user: string, cspl: string[], conf: string, rank: string, away: boolean, timeout: boolean, ignore: boolean
