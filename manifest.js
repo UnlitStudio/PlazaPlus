@@ -4,11 +4,12 @@ function cjs(v) { return [vendor(), js(v)]; }
 
 ({
 	manifest_version: 2,
-	name: 'Plaza+',
+	name: '__MSG_extName__',
 	version: '4.7.2',
 	version_name: '4.7.2',
 	
-	description: 'Adds several new features and commands to the 3DSPlaza chatrooms.',
+	description: '__MSG_extDesc__',
+	default_locale: 'en',
 	icons: {128: 'icon.png'},
 	author: 'Fayne Aldan',
 	permissions: [
