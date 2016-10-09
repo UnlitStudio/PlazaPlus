@@ -7,14 +7,9 @@
 		"noImplicitReturns": true,
 		"module": "commonjs",
 		"target": "es5",
-		"jsx": "react"
+		"lib": ["es5", "es2015.promise"]
 	},
 	"files": [
-		"./typings/index.d.ts",
-		"./src/bg.ts",
-		"./src/chat.ts",
-		"./src/chatNav.ts",
-		"./src/help.ts",
-		"./src/options.ts"
+		"./src/**/*"
 	]
 }
