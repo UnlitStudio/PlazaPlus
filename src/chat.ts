@@ -120,7 +120,7 @@ $('form:first').html('Change your name color:<br>').append(
 	'<br>'
 ); $('<div/>', {id: 'plusbar'}).appendTo('body');
 
-type BoxSel = [number, number, 'forward' | 'backward' | 'none'];
+type BoxSel = [number, number, string];
 class TextBox {
 	constructor(public dest: Dest) {
 		this.text = ''; this.sel = [0, 0, 'forward'];

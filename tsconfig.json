@@ -6,10 +6,9 @@
 		"noImplicitAny": true,
 		"noImplicitReturns": true,
 		"module": "commonjs",
-		"target": "es5",
-		"lib": ["es5", "es2015.promise"]
+		"target": "es6"
 	},
-	"files": [
-		"./src/**/*"
+	"include": [
+		"src/**/*"
 	]
 }
