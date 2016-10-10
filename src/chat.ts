@@ -1,7 +1,7 @@
 import * as _ from 'lodash';
 import * as $ from 'jquery';
 import * as tinycolor from 'tinycolor2';
-import linkifyJq from 'linkifyjs/jquery';
+import * as linkifyJq from 'linkifyjs/jquery';
 import Enums from './enums';
 import {sendMsgFactory, listenForMsgs, MsgListenReg} from './func/portHelpers';
 import {storageListen} from './helpers/storage';
@@ -671,7 +671,7 @@ function findUsername(tag: JQuery): string | undefined {
 	if (!tag.length) return undefined;
 	if (tag.find('span[style^="background"]').length) return undefined;
 	var name = tag.children('span:first-child');
-	if (name) return _(name.text()).split(' ').last();
+	if (name.length) return _(name.text()).split(' ').last();
 	else return _.trimEnd(tag.text(), ':');
 }
 
@@ -687,7 +687,7 @@ var chatRead = _.throttle(function() {
 		if (!name) nametag = $();
 		var idRegex = html.match(/<!---cmid:(\d+)-->/);
 		var id = _.toInteger(idRegex ? idRegex[1] : -1);
-		var msg = $(undoEmotes(html)).text();
+		var msg = stripHTML(undoEmotes(html));
 		msg = msg.substr(nametag.text().length);
 		var wRegex = html.match(/<span style="font-size: 75%; background-color: cyan; opacity: 0\.75; color: blue;">to ([^<]+)<\/span>/);
 		var whisper = wRegex ? wRegex[1] : undefined;
