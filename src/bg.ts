@@ -3,6 +3,7 @@ import * as $ from 'jquery';
 import Enums from './enums';
 import getChat from './func/getChatName';
 import {sendMsgFactory, listenForMsgs, SendMsgFunc, MsgListenReg} from './func/portHelpers';
+import {Dict} from './helpers/types';
 
 type ChatList = {[room: string]: (() => void)[]};
 type MainList = {[room: string]: SendMsgFunc};
@@ -90,8 +91,8 @@ chrome.alarms.onAlarm.addListener(function(alarm) {
 });
 chrome.alarms.create('icons', {delayInMinutes: 1, periodInMinutes: 3});
 
-type Storage = {};
-type Updater = (storage: Storage) => Promise<Storage>;
+type Storage = Dict<any>;
+type Updater = (storage: Storage) => Storage;
 interface Version {
 	id: string; local?: Updater; sync?: Updater;
 }

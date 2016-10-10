@@ -1,5 +1,5 @@
 import * as _ from 'lodash';
-import {Dict} from '../helpers/types.ts';
+import {Dict} from '../helpers/types';
 
 export type SendMsgFunc = (type: string, ...data: any[]) => void;
 export type Message = {type: string; data: any[]};

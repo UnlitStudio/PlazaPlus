@@ -163,7 +163,7 @@ savers['aliases'] = function() {
 
 chrome.storage.sync.get(function(items) {
 	// this won't halt the entire script, right?
-	if (chrome.runtime.lastError) throw new Error(chrome.runtime.lastError);
+	if (chrome.runtime.lastError) throw new Error(chrome.runtime.lastError.message);
 	_.each(items, function(v, k) { console.log(loaders[k] || _.noop);
 	(loaders[k] || _.noop)(v); });
 });

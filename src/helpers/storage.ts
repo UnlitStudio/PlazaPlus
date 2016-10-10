@@ -19,14 +19,14 @@ export function storageListen(localListeners: StorListenReg, syncListeners: Stor
 export function localListen(listeners: StorListenReg) {
 	listen(listeners, 'local');
 	chrome.storage.local.get(Enums.localDef, function(items) {
-		if (chrome.runtime.lastError) throw new Error(chrome.runtime.lastError);
+		if (chrome.runtime.lastError) throw new Error(chrome.runtime.lastError.message);
 		_.each(items, function(v, k) { (listeners[k] || _.noop)(v); });
 	});
 }
 export function syncListen(listeners: StorListenReg) {
 	listen(listeners, 'sync');
 	chrome.storage.sync.get(Enums.syncDef, function(items) {
-		if (chrome.runtime.lastError) throw new Error(chrome.runtime.lastError);
+		if (chrome.runtime.lastError) throw new Error(chrome.runtime.lastError.message);
 		_.each(items, function(v, k) { (listeners[k] || _.noop)(v); });
 	});
 }
