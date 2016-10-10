@@ -1,6 +1,7 @@
 function vendor() { return js('vendor'); }
+function common() { return js('common'); }
 function js(v) { return 'js/'+v+'.js'; }
-function cjs(v) { return [vendor(), js(v)]; }
+function cjs(v) { return [vendor(), common(), js(v)]; }
 
 ({
 	manifest_version: 2,

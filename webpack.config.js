@@ -7,7 +7,7 @@ module.exports = {
 		chatNav: './src/chatNav.ts',
 		help: './src/help.ts',
 		options: './src/options.ts',
-		vendor: ['jquery', 'lodash', 'autolinker', 'tinycolor2']
+		vendor: ['jquery', 'lodash', 'linkifyjs', 'tinycolor2']
 	},
 
 	output: {
@@ -35,7 +35,11 @@ module.exports = {
 	},
 
 	plugins: [
-		new CommonsChunkPlugin('vendor', 'vendor.js')
+		new CommonsChunkPlugin({
+			names: ['common', 'vendor'],
+			minChunks: 2
+		})
 	],
+
 	ts: {silent: true}, failOnError: false
 };
