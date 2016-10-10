@@ -1,14 +1,15 @@
 import * as _ from 'lodash';
 import * as $ from 'jquery';
 import * as tinycolor from 'tinycolor2';
-import * as Autolinker from 'autolinker';
+import linkifyJq from 'linkifyjs/jquery';
 import Enums from './enums';
 import {sendMsgFactory, listenForMsgs, MsgListenReg} from './func/portHelpers';
 import {storageListen} from './helpers/storage';
 import {Dict, IDict} from './helpers/types';
+linkifyJq($);
 
 var chatIns = _.rest(function(objs: any[]) {
-	$('#demo').prepend(_.concat(objs, '<br>', '<!--d-->'));
+	$('#demo').prepend(_.concat(objs, '<!--d-->'));
 });
 // Wrapped because I don't exactly want to keep canRun in memory.
 (function(){
@@ -31,10 +32,10 @@ var chatIns = _.rest(function(objs: any[]) {
 import './chat.less';
 
 function chatMsg(msg: string) {
-	chatIns($('<span/>', {text: ': '+msg, css: {color: 'gray'}}));
+	chatIns($('<div/>', {text: ': '+msg, css: {color: 'gray'}}));
 }
 function chatErr(msg: string) {
-	chatIns($('<span/>', {text: ': '+msg, css: {color: 'red'}}));
+	chatIns($('<div/>', {text: ': '+msg, css: {color: 'red'}}));
 }
 function microtime() {
 	var now = _.now() / 1000, s = parseInt(String(now), 10);
@@ -80,8 +81,6 @@ port.onDisconnect.addListener(function() {
 	);
 	setTimeout(function() { location.reload(); }, 1000);
 });
-
-var linker = new Autolinker({stripPrefix: false, twitter: false, phone: false});
 
 storageListen({
 	iconCache(v) {
@@ -665,77 +664,77 @@ $('#bericht').attr({'onkeypress': null}).keydown(function(e) {
 	if (csp[1]) (<HTMLInputElement>$('#bericht')[0]).setSelectionRange(csp[2] + 12, csp[2] + 12);
 });
 
-var chatCache: string = null, chatCheck = 0;
+// undefined means unknown; should only happen if using an RP tag with "play you are in"
+function findUsername(tag: JQuery): string | undefined {
+	// b is last child because of mod crowns
+	tag = tag.children('b:last-child').children('u:only-child');
+	if (!tag.length) return undefined;
+	if (tag.find('span[style^="background"]').length) return undefined;
+	var name = tag.children('span:first-child');
+	if (name) return _(name.text()).split(' ').last();
+	else return _.trimEnd(tag.text(), ':');
+}
+
+var chatCheck = 0;
 var chatRead = _.throttle(function() {
-	var html = $('#demo').html();
-	if (chatCache == html) return;
-	var brarray = html.split('<!--d-->'), whisp: string = null;
-	if (brarray[0].substr(0, 9) == 'undefined') {
-		setTimeout(function() { chatErr('Failed to retrieve messages.'); }, 0);
-		brarray[0] = brarray[0].substr(9);
-	}
-	var res = _.map(_.take(brarray, 75), function(v) {
-		if (_.includes(v, '<!--plused-->')) return v;
-		var uRegex = v.match(/(?:<b><u(?: oncontextmenu="[^"]+")?>(?:<span style="font-size: 85%;">(?:\[(?:.+)\] )?)?(.+?)(?:<\/span> as (?:.*?))?:?<\/u><\/b>)/);
-		var name = uRegex ? _.trim(stripHTML(uRegex[1])) : null;
-		var idRegex = v.match(/<!---cmid:(\d+)-->/);
-		var idCheck: number = _.toInteger(idRegex ? idRegex[1] : -1);
-		var user = name;
-		var msg = undoEmotes(v.replace(/<span style="color: (.*?)<\/u><\/b><\/span>/, ''));
-		msg = _.trim(_.trim(stripHTML(msg)));
-		var wRegex = v.match(/<span style="font-size: 75%; background-color: cyan; opacity: 0\.75; color: blue;">to ([^<]+)<\/span>/);
-		var whisper = wRegex ? wRegex[1] : null;
-		var warnRegex = v.match(/<span style="color: red;"><u>(! Warning (?:[^<]*) !)<\/u><\/span>/);
-		if (warnRegex) msg = _.trim(stripHTML(undoEmotes(warnRegex[1])));
-		var enc = false, warnCheck = !!warnRegex;
-		if (whisper) msg = _.trim(msg.replace(new RegExp('to '+_.escapeRegExp(whisper)+'$'), ''));
-		if (msg.match(/^###ascii###( \d+)+$/)) (function() {
-			var reg = /(\d+)+/g, chr: RegExpExecArray; var en = '';
+	$($('#demo > div').not('[plused]').get().reverse()).each(function() {
+		var line = $(this);
+		var text = line.text();
+		var html = $(this).html();
+		line.prop('plused', true);
+		var nametag = $(this).children('span:first-child');
+		var name = findUsername(nametag);
+		if (!name) nametag = $();
+		var idRegex = html.match(/<!---cmid:(\d+)-->/);
+		var id = _.toInteger(idRegex ? idRegex[1] : -1);
+		var msg = $(undoEmotes(html)).text();
+		msg = msg.substr(nametag.text().length);
+		var wRegex = html.match(/<span style="font-size: 75%; background-color: cyan; opacity: 0\.75; color: blue;">to ([^<]+)<\/span>/);
+		var whisper = wRegex ? wRegex[1] : undefined;
+		var warn = !!html.match(/<span style="color: red;"><u>(! Warning (?:[^<]*) !)<\/u><\/span>/);
+		if (whisper) msg = msg.replace(new RegExp('to '+_.escapeRegExp(whisper)+'$'), '');
+		msg = _.trim(msg);
+		var enc = false;
+		if (msg.match(/^###ascii###( \d+)+$/)) {
+			let reg = /(\d+)+/g, chr: RegExpExecArray, en = '';
 			while ((chr = reg.exec(msg)) !== null) en += String.fromCharCode(_.toNumber(chr[1]));
 			msg = en; enc = true;
-		})();
+		}
 		var nregex = '(' + _.join(_.map(_.compact(_.split(notifyNames, ' ')), _.escapeRegExp), '|') + ')';
-		var ment = nregex != "()" ? !!msg.match(new RegExp(nregex, 'i')) : false;
-		name = user ? _.toLower(user) : null;
-		var fay = name == 'fayne_aldan' && (whisper == 'you' || !whisper);
-		if (whisper == 'you' && user && !whisp) whisp = user;
-		if (idCheck > chatCheck) {
+		var ment = nregex != "()" ? !!msg.match(new RegExp(nregex, 'i')) : undefined;
+		var user = name ? _.toLower(name) : undefined;
+		var fay = user == 'fayne_aldan' && (whisper == 'you' || !whisper);
+		if (whisper == 'you' && name) lastWhisp = name;
+		if (id > chatCheck) {
 			if (enc)
-				setTimeout(function() {
-					chatMsg('Chat' + (user ? ' from '+user : '') + ' decrypted: '+msg);
-				}, 0);
-			if (mainTab && chatCache) {
-				if (idCheck == -1) {} // Don't notify.
+				line.before($('<div/>', {text: ': Chat decrypted: '+msg, css: {color: 'gray'}}), '<!--d-->');
+			if (mainTab && chatCheck > 0) {
+				if (id == -1) {} // Don't notify.
 				else if (fay && _.includes(msg, '!+check')) (function() {
 					var vers = chrome.runtime.getManifest().version_name;
-					sendChat(`/whisperto ${user} Using Plaza+ ${vers}`, true);
+					sendChat(`/whisperto ${name} Using Plaza+ ${vers}`, true);
 				})();
 				else if (whisper == 'you' && notifyWhispers)
-					sendMessage('notify', 'whisper', {user: user, msg: msg, warn: warnCheck});
+					sendMessage('notify', 'whisper', {user: name, msg: msg, warn: warn});
 				else if (ment)
-					sendMessage('notify', 'mention', {user: user, msg: msg, warn: warnCheck});
+					sendMessage('notify', 'mention', {user: name, msg: msg, warn: warn});
 			}
 		}
 		if (name) {
-			var i = 'class="plusicon"';
-			if (icons[name]) i += ' src="' + icons[name] + '"';
-			var b = 'chatline';
-			if (focusList.length > 0 && !_.includes(_.map(focusList, _.toLower), name)) b += ' blur';
-			v = '<!--plused-->'+v.replace(/^<div>/, '<div class="'+b+'" user="'+name+'"><img '+i+'> ');
-		} else v = '<!--plused-->' + v;
-		if (_.includes(v, '<script')) return v;
-		return linker.link(v);
+			let icon = $('<img>').addClass('plusicon');
+			if (icons[name]) icon.attr('src', icons[name]);
+			line.addClass('chatline');
+			if (focusList.length > 0 && !_.includes(_.map(focusList, _.toLower), name)) line.addClass('blur');
+			line.attr('user', user);
+			line.prepend(icon);
+		}
+		line.linkify({ignoreTags: ['script']});
 	});
-	if (whisp) lastWhisp = whisp;
-	chatCache = _.join(res, '<!--d-->'); var idCheck = chatCache.match(/<!---cmid:(\d+)-->/);
+	var idCheck = $('#demo').html().match(/<!---cmid:(\d+)-->/);
 	if (idCheck) chatCheck = _.toNumber(idCheck[1]);
-	$('#demo').html(chatCache);
 });
 new MutationObserver(chatRead).observe($('#demo')[0], {childList: true});
-// Blame Rob.
-$('#demo').html($('#demo').html().replace(
-	/<!--d--><script type="text\/javascript">lid = \d+;<\/script>/, ''
-));
+chatRead();
 
 interface OnlineUser {
 	user: string, cspl: string[], conf: string, rank: string, away: boolean, timeout: boolean, ignore: boolean
