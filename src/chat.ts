@@ -677,7 +677,7 @@ function findUsername(tag: JQuery): string | undefined {
 	tag = tag.children('b:last-child').children('u:only-child');
 	if (!tag.length) return undefined;
 	if (tag.find('span[style^="background"]').length) return undefined;
-	var name = tag.children('span:first-child');
+	var name = tag.children('span[style^="font"]:first-child');
 	if (name.length) return _(name.text()).split(' ').last();
 	else return _.trimEnd(tag.text(), ':');
 }
@@ -733,7 +733,7 @@ var chatRead = _.throttle(function() {
 			line.addClass('chatline');
 			if (focusList.length > 0 && !_.includes(_.map(focusList, _.toLower), user)) line.addClass('blur');
 			line.attr('user', user);
-			line.prepend(icon);
+			line.prepend(icon, ' ');
 		}
 		line.linkify({ignoreTags: ['script']});
 	});
