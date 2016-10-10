@@ -497,6 +497,9 @@ commands['sperm'] = (param) => new Promise(function(ok, err) {
 		ok('/minipbatch '+cmd+' chat.use.v3study'+room+' '+users.join(' '));
 	});
 });
+commands['/to'] = function(param) {
+	return Promise.resolve(' //to ' + param.join(' '));
+};
 
 function getUsers(users: string[]) {
 	// For some reason, this has to be PromiseLike<string>[]
@@ -863,48 +866,55 @@ function appendToTextbox(text: string){
 	be.setSelectionRange(range, range);
 }
 
-var emoticons = {
-	Faces: [
-		{n: ':)', w: 15, h: 15, p: '-1px -17px'},
-		{n: ':D', w: 15, h: 15, p: '-17px -17px'},
-		{n: ';)', w: 15, h: 15, p: '-33px -17px'},
-		{n: ':S', w: 15, h: 15, p: '-49px -17px'},
-		{n: ':@', w: 15, h: 15, p: '-81px -17px'},
-		{n: "-_-'", w: 15, h: 15, p: '-40px -53px'},
-		{n: ':O', w: 16, h: 16, p: '-1px -33px'},
-		{n: 'xD', w: 16, h: 16, p: '-18px -33px'},
-		{n: ':fp:', w: 19, h: 19, p: '-35px -33px'},
-		{n: 'R:', w: 16, h: 16, p: '-55px -33px'},
-		{n: 'RB:', w: 16, h: 16, p: '-72px -33px'},
-		{n: 'R(', w: 16, h: 16, p: '-89px -33px'},
-		{n: ':ponything:', w: 16, h: 23, p: '-109px -90px'},
-		{n: ':dummy:', w: 21, h: 16, p: '-1px -53px'},
-		{n: ':nuu:', w: 16, h: 16, p: '-23px -53px'}
-	], Memes: [
-		{n: ':troll:', w: 18, h: 15, p: '-1px -70px'},
-		{n: ':lol:', w: 17, h: 20, p: '-20px -70px'},
-		{n: ':megusta:', w: 22, h: 23, p: '-38px -70px'},
-		{n: ':no:', w: 20, h: 20, p: '-61px -70px'},
-		{n: ':raeg:', w: 20, h: 20, p: '-61px -91px'},
-		{n: ':pface:', w: 14, h: 19, p: '-82px -70px'},
-		{n: ':falone:', w: 26, h: 24, p: '-82px -90px'},
-		{n: ':ohplz:', w: 17, h: 19, p: '-1px -94px'},
-		{n: ':ydsay:', w: 20, h: 16, p: '-19px -94px'},
-		{n: ':doge:', w: 20, h: 20, p: '-97px -69px'}
-	], Other: [
-		{n: '@<3@', w: 15, h: 13, p: '-61px -114px'},
-		{n: ':yoshi:', w: 16, h: 16, p: '-1px -114px'},
-		{n: ':msonic:', w: 16, h: 16, p: '-18px -114px'},
-		{n: ':pball:', w: 14, h: 15, p: '-35px -114px'},
-		{n: ':file:', w: 10, h: 14, p: '-50px -114px'},
-		{n: '//to do', w: 16, h: 16, p: '-77px -114px'},
-		{n: ':cake:', w: 15, h: 15, p: '-94px -115px'},
-		{n: ':mario:', w: 15, h: 15, p: '-110px -115px'},
-		{n: ':luigi:', w: 15, h: 14, p: '-126px -116px'},
-		{n: ':ds:', w: 15, h: 15, p: '-1px -131px'},
-		{n: ':burger:', w: 15, h: 15, p: '-17px -130px'},
-		{n: ':taco:', w: 15, h: 15, p: '-33px -130px'},
-		{n: ':icecream:', w: 15, h: 15, p: '-49px -130px'}
+interface EmoteDict { [c: string]: EmoteCat; }
+type EmoteCat = Emote[];
+interface Emote {
+	n: string, i: string;
+}
+
+var emoticons: EmoteDict = {
+	'Faces': [
+		{n: ':)', i: 'happy.gif'},
+		{n: ':D', i: 'icon_cheesygrin.gif'},
+		{n: ';)', i: 'icon_wink.gif'},
+		{n: ':S', i: 'icon_confused.gif'},
+		{n: ':@', i: 'icon_mad.gif'},
+		{n: "-_-'", i: 'buy_sweat.png'},
+		{n: ':O', i: 'icon_amazed.gif'},
+		{n: 'xD', i: 'ecksdee.png'},
+		{n: ':fp:', i: 'icon_facepalm.gif'},
+		{n: 'R:', i: 'epic.png'},
+		{n: 'RB:', i: 'rbow.png'},
+		{n: 'R(', i: 'icon_unknown1.png'},
+		{n: ':ponything:', i: 'icon_ponything.jpg'},
+		{n: ':dummy:', i: 'reklshum.gif'},
+		{n: ':nuu:', i: 'nuu.gif'}
+	], 'Memes': [
+		{n: ':troll:', i: 'icon_trollface.png'},
+		{n: ':lol:', i: 'lol.png'},
+		{n: ':megusta:', i: 'icon_megusta.jpg'},
+		{n: ':no:', i: 'no.png'},
+		{n: ':raeg:', i: 'raeg.png'},
+		{n: ':pface:', i: 'pokerface.png'},
+		{n: ':falone:', i: 'icon_foreveralone.jpg'},
+		{n: ':ohplz:', i: 'please.png'},
+		{n: ':ydsay:', i: 'buy_youdontsay.png'},
+		{n: ':doge:', i: 'doge.png'}
+	], 'Other': [
+		{n: '@<3@', i: 'icon_bheart.gif'},
+		{n: ':yoshi:', i: 'buy_yoshi.png'},
+		{n: ':msonic:', i: 'buy_sonic.png'},
+		{n: ':pball:', i: 'buy_pokeball.jpg'},
+		{n: ':file:', i: 'icon_file.png'},
+		{n: '//to do', i: 'icon_todo.png'},
+		{n: ':cake:', i: 'icon_cake.gif'},
+		{n: ':mario:', i: 'icon_mario.png'},
+		{n: ':luigi:', i: 'icon_luigi.png'},
+		{n: ':ds:', i: 'icon_ds.gif'},
+		{n: ':burger:', i: 'icon_burger.gif'},
+		{n: ':taco:', i: 'icon_taco.gif'},
+		{n: ':icecream:', i: 'icon_icecream.gif'},
+		{n: '[woofie!]', i: 'wolfthing.gif'}
 	]
 };
 
@@ -917,12 +927,12 @@ $('#plus-emoticonPickerBtn').click(function() {
 	$('#plus-emoticonPicker, #plus-emoticonPickerBtn').toggleClass('active');
 });
 
-_.each(emoticons, function(emotes, cat) {
-	$('#plus-emoticonPicker').append($('<hr>', {title: cat}));
-	_.each(emotes, function(emote) {
-		$("#plus-emoticonPicker").append($('<span/>', {css: {
-				backgroundPosition: emote.p, width: emote.w, height: emote.h
-		}}).click(function() { appendToTextbox(emote.n); }).attr('title', emote.n));
+_.each(emoticons, function(cat, name) {
+	$('#plus-emoticonPicker').append($('<hr>', {title: name}));
+	_.each(cat, function(emote) {
+		var img = $('<img>', { src: chrome.extension.getURL('res/emotes/'+emote.i) });
+		img.click(function() { appendToTextbox(emote.n); }).attr('title', emote.n);
+		$("#plus-emoticonPicker").append(img);
 	});
 });
 
