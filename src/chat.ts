@@ -723,11 +723,11 @@ var chatRead = _.throttle(function() {
 					sendMessage('notify', 'mention', {user: name, msg: msg, warn: warn});
 			}
 		}
-		if (name) {
+		if (user) {
 			let icon = $('<img>').addClass('plusicon');
-			if (icons[name]) icon.attr('src', icons[name]);
+			if (icons[user]) icon.attr('src', icons[user]);
 			line.addClass('chatline');
-			if (focusList.length > 0 && !_.includes(_.map(focusList, _.toLower), name)) line.addClass('blur');
+			if (focusList.length > 0 && !_.includes(_.map(focusList, _.toLower), user)) line.addClass('blur');
 			line.attr('user', user);
 			line.prepend(icon);
 		}

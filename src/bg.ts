@@ -77,9 +77,9 @@ chrome.alarms.onAlarm.addListener(function(alarm) {
 	if (alarm.name != 'icons') return;
 	chrome.storage.local.get(['iconCache'], function(items) {
 		var rev = items['iconCache'].Revision;
-		$.ajax('http://188.166.72.241/services/plaza+/rev.php', {
+		$.ajax('https://erman.rocks/services/plaza+/rev.php', {
 			success: function(data) {
-				if (data != rev) $.ajax('http://188.166.72.241/services/plaza+/icons.json', {
+				if (data != rev) $.ajax('https://erman.rocks/services/plaza+/icons.json', {
 					success: function(icons) {
 						if (icons.Revision) chrome.storage.local.set({iconCache: icons});
 					}, timeout: 10000, dataType: 'json', cache: false

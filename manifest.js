@@ -13,7 +13,7 @@ function cjs(v) { return [vendor(), common(), js(v)]; }
 	icons: {128: 'icon.png'},
 	author: 'Fayne Aldan',
 	permissions: [
-		'storage', 'notifications', 'alarms', 'http://188.166.72.241/',
+		'storage', 'notifications', 'alarms', 'https://erman.rocks/',
 		'http://3dsplaza.com/', 'http://pc.3dsplaza.com/'
 	],
 	options_ui: {

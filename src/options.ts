@@ -29,7 +29,7 @@ function testSound() {
 	a.play();
 }
 $('#changeIcon').click(function() {
-	window.open('http://188.166.72.241/services/plaza+/','_blank');
+	window.open('https://erman.rocks/services/plaza+/', '_blank');
 });
 $('#notifySound').change(testSound);
 $('#notifySoundTest').click(testSound);
