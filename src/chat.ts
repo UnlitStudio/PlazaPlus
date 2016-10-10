@@ -1,14 +1,15 @@
 import * as _ from 'lodash';
 import * as $ from 'jquery';
 import * as tinycolor from 'tinycolor2';
-import * as Autolinker from 'autolinker';
+import * as linkifyJq from 'linkifyjs/jquery';
 import Enums from './enums';
 import {sendMsgFactory, listenForMsgs, MsgListenReg} from './func/portHelpers';
 import {storageListen} from './helpers/storage';
 import {Dict, IDict} from './helpers/types';
+linkifyJq($);
 
 var chatIns = _.rest(function(objs: any[]) {
-	$('#demo').prepend(_.concat(objs, '<br>', '<!--d-->'));
+	$('#demo').prepend(_.concat(objs, '<!--d-->'));
 });
 // Wrapped because I don't exactly want to keep canRun in memory.
 (function(){
@@ -31,10 +32,10 @@ var chatIns = _.rest(function(objs: any[]) {
 import './chat.less';
 
 function chatMsg(msg: string) {
-	chatIns($('<span/>', {text: ': '+msg, css: {color: 'gray'}}));
+	chatIns($('<div/>', {text: ': '+msg, css: {color: 'gray'}}));
 }
 function chatErr(msg: string) {
-	chatIns($('<span/>', {text: ': '+msg, css: {color: 'red'}}));
+	chatIns($('<div/>', {text: ': '+msg, css: {color: 'red'}}));
 }
 function microtime() {
 	var now = _.now() / 1000, s = parseInt(String(now), 10);
@@ -81,8 +82,6 @@ port.onDisconnect.addListener(function() {
 	setTimeout(function() { location.reload(); }, 1000);
 });
 
-var linker = new Autolinker({stripPrefix: false, twitter: false, phone: false});
-
 storageListen({
 	iconCache(v) {
 		icons = v; $('.plusicon').attr('src', null);
@@ -120,7 +119,7 @@ $('form:first').html('Change your name color:<br>').append(
 	'<br>'
 ); $('<div/>', {id: 'plusbar'}).appendTo('body');
 
-type BoxSel = [number, number, 'forward' | 'backward' | 'none'];
+type BoxSel = [number, number, string];
 class TextBox {
 	constructor(public dest: Dest) {
 		this.text = ''; this.sel = [0, 0, 'forward'];
@@ -498,6 +497,13 @@ commands['sperm'] = (param) => new Promise(function(ok, err) {
 		ok('/minipbatch '+cmd+' chat.use.v3study'+room+' '+users.join(' '));
 	});
 });
+commands['/to'] = function(param) {
+	return Promise.resolve(' //to ' + param.join(' '));
+};
+commands['thd'] = function(param) {
+	window.open('/forums/topic.php?topic='+param.shift(), '_top');
+	return Promise.resolve();
+};
 
 function getUsers(users: string[]) {
 	// For some reason, this has to be PromiseLike<string>[]
@@ -665,77 +671,77 @@ $('#bericht').attr({'onkeypress': null}).keydown(function(e) {
 	if (csp[1]) (<HTMLInputElement>$('#bericht')[0]).setSelectionRange(csp[2] + 12, csp[2] + 12);
 });
 
-var chatCache: string = null, chatCheck = 0;
+// undefined means unknown; should only happen if using an RP tag with "play you are in"
+function findUsername(tag: JQuery): string | undefined {
+	// b is last child because of mod crowns
+	tag = tag.children('b:last-child').children('u:only-child');
+	if (!tag.length) return undefined;
+	if (tag.find('span[style^="background"]').length) return undefined;
+	var name = tag.children('span:first-child');
+	if (name.length) return _(name.text()).split(' ').last();
+	else return _.trimEnd(tag.text(), ':');
+}
+
+var chatCheck = 0;
 var chatRead = _.throttle(function() {
-	var html = $('#demo').html();
-	if (chatCache == html) return;
-	var brarray = html.split('<!--d-->'), whisp: string = null;
-	if (brarray[0].substr(0, 9) == 'undefined') {
-		setTimeout(function() { chatErr('Failed to retrieve messages.'); }, 0);
-		brarray[0] = brarray[0].substr(9);
-	}
-	var res = _.map(_.take(brarray, 75), function(v) {
-		if (_.includes(v, '<!--plused-->')) return v;
-		var uRegex = v.match(/(?:<b><u(?: oncontextmenu="[^"]+")?>(?:<span style="font-size: 85%;">(?:\[(?:.+)\] )?)?(.+?)(?:<\/span> as (?:.*?))?:?<\/u><\/b>)/);
-		var name = uRegex ? _.trim(stripHTML(uRegex[1])) : null;
-		var idRegex = v.match(/<!---cmid:(\d+)-->/);
-		var idCheck: number = _.toInteger(idRegex ? idRegex[1] : -1);
-		var user = name;
-		var msg = undoEmotes(v.replace(/<span style="color: (.*?)<\/u><\/b><\/span>/, ''));
-		msg = _.trim(_.trim(stripHTML(msg)));
-		var wRegex = v.match(/<span style="font-size: 75%; background-color: cyan; opacity: 0\.75; color: blue;">to ([^<]+)<\/span>/);
-		var whisper = wRegex ? wRegex[1] : null;
-		var warnRegex = v.match(/<span style="color: red;"><u>(! Warning (?:[^<]*) !)<\/u><\/span>/);
-		if (warnRegex) msg = _.trim(stripHTML(undoEmotes(warnRegex[1])));
-		var enc = false, warnCheck = !!warnRegex;
-		if (whisper) msg = _.trim(msg.replace(new RegExp('to '+_.escapeRegExp(whisper)+'$'), ''));
-		if (msg.match(/^###ascii###( \d+)+$/)) (function() {
-			var reg = /(\d+)+/g, chr: RegExpExecArray; var en = '';
+	$($('#demo > div').not('[plused]').get().reverse()).each(function() {
+		var line = $(this);
+		var text = line.text();
+		var html = $(this).html();
+		line.prop('plused', true);
+		var nametag = $(this).children('span:first-child');
+		var name = findUsername(nametag);
+		if (!name) nametag = $();
+		var idRegex = html.match(/<!---cmid:(\d+)-->/);
+		var id = _.toInteger(idRegex ? idRegex[1] : -1);
+		var msg = stripHTML(undoEmotes(html));
+		msg = msg.substr(nametag.text().length);
+		var wRegex = html.match(/<span style="font-size: 75%; background-color: cyan; opacity: 0\.75; color: blue;">to ([^<]+)<\/span>/);
+		var whisper = wRegex ? wRegex[1] : undefined;
+		var warn = !!html.match(/<span style="color: red;"><u>(! Warning (?:[^<]*) !)<\/u><\/span>/);
+		if (whisper) msg = msg.replace(new RegExp('to '+_.escapeRegExp(whisper)+'$'), '');
+		msg = _.trim(msg);
+		var enc = false;
+		if (msg.match(/^###ascii###( \d+)+$/)) {
+			let reg = /(\d+)+/g, chr: RegExpExecArray, en = '';
 			while ((chr = reg.exec(msg)) !== null) en += String.fromCharCode(_.toNumber(chr[1]));
 			msg = en; enc = true;
-		})();
+		}
 		var nregex = '(' + _.join(_.map(_.compact(_.split(notifyNames, ' ')), _.escapeRegExp), '|') + ')';
-		var ment = nregex != "()" ? !!msg.match(new RegExp(nregex, 'i')) : false;
-		name = user ? _.toLower(user) : null;
-		var fay = name == 'fayne_aldan' && (whisper == 'you' || !whisper);
-		if (whisper == 'you' && user && !whisp) whisp = user;
-		if (idCheck > chatCheck) {
+		var ment = nregex != "()" ? !!msg.match(new RegExp(nregex, 'i')) : undefined;
+		var user = name ? _.toLower(name) : undefined;
+		var fay = user == 'fayne_aldan' && (whisper == 'you' || !whisper);
+		if (whisper == 'you' && name) lastWhisp = name;
+		if (id > chatCheck) {
 			if (enc)
-				setTimeout(function() {
-					chatMsg('Chat' + (user ? ' from '+user : '') + ' decrypted: '+msg);
-				}, 0);
-			if (mainTab && chatCache) {
-				if (idCheck == -1) {} // Don't notify.
+				line.before($('<div/>', {text: ': Chat decrypted: '+msg, css: {color: 'gray'}}), '<!--d-->');
+			if (mainTab && chatCheck > 0) {
+				if (id == -1) {} // Don't notify.
 				else if (fay && _.includes(msg, '!+check')) (function() {
 					var vers = chrome.runtime.getManifest().version_name;
-					sendChat(`/whisperto ${user} Using Plaza+ ${vers}`, true);
+					sendChat(`/whisperto ${name} Using Plaza+ ${vers}`, true);
 				})();
 				else if (whisper == 'you' && notifyWhispers)
-					sendMessage('notify', 'whisper', {user: user, msg: msg, warn: warnCheck});
+					sendMessage('notify', 'whisper', {user: name, msg: msg, warn: warn});
 				else if (ment)
-					sendMessage('notify', 'mention', {user: user, msg: msg, warn: warnCheck});
+					sendMessage('notify', 'mention', {user: name, msg: msg, warn: warn});
 			}
 		}
-		if (name) {
-			var i = 'class="plusicon"';
-			if (icons[name]) i += ' src="' + icons[name] + '"';
-			var b = 'chatline';
-			if (focusList.length > 0 && !_.includes(_.map(focusList, _.toLower), name)) b += ' blur';
-			v = '<!--plused-->'+v.replace(/^<div>/, '<div class="'+b+'" user="'+name+'"><img '+i+'> ');
-		} else v = '<!--plused-->' + v;
-		if (_.includes(v, '<script')) return v;
-		return linker.link(v);
+		if (user) {
+			let icon = $('<img>').addClass('plusicon');
+			if (icons[user]) icon.attr('src', icons[user]);
+			line.addClass('chatline');
+			if (focusList.length > 0 && !_.includes(_.map(focusList, _.toLower), user)) line.addClass('blur');
+			line.attr('user', user);
+			line.prepend(icon);
+		}
+		line.linkify({ignoreTags: ['script']});
 	});
-	if (whisp) lastWhisp = whisp;
-	chatCache = _.join(res, '<!--d-->'); var idCheck = chatCache.match(/<!---cmid:(\d+)-->/);
+	var idCheck = $('#demo').html().match(/<!---cmid:(\d+)-->/);
 	if (idCheck) chatCheck = _.toNumber(idCheck[1]);
-	$('#demo').html(chatCache);
 });
 new MutationObserver(chatRead).observe($('#demo')[0], {childList: true});
-// Blame Rob.
-$('#demo').html($('#demo').html().replace(
-	/<!--d--><script type="text\/javascript">lid = \d+;<\/script>/, ''
-));
+chatRead();
 
 interface OnlineUser {
 	user: string, cspl: string[], conf: string, rank: string, away: boolean, timeout: boolean, ignore: boolean
@@ -864,48 +870,55 @@ function appendToTextbox(text: string){
 	be.setSelectionRange(range, range);
 }
 
-var emoticons = {
-	Faces: [
-		{n: ':)', w: 15, h: 15, p: '-1px -17px'},
-		{n: ':D', w: 15, h: 15, p: '-17px -17px'},
-		{n: ';)', w: 15, h: 15, p: '-33px -17px'},
-		{n: ':S', w: 15, h: 15, p: '-49px -17px'},
-		{n: ':@', w: 15, h: 15, p: '-81px -17px'},
-		{n: "-_-'", w: 15, h: 15, p: '-40px -53px'},
-		{n: ':O', w: 16, h: 16, p: '-1px -33px'},
-		{n: 'xD', w: 16, h: 16, p: '-18px -33px'},
-		{n: ':fp:', w: 19, h: 19, p: '-35px -33px'},
-		{n: 'R:', w: 16, h: 16, p: '-55px -33px'},
-		{n: 'RB:', w: 16, h: 16, p: '-72px -33px'},
-		{n: 'R(', w: 16, h: 16, p: '-89px -33px'},
-		{n: ':ponything:', w: 16, h: 23, p: '-109px -90px'},
-		{n: ':dummy:', w: 21, h: 16, p: '-1px -53px'},
-		{n: ':nuu:', w: 16, h: 16, p: '-23px -53px'}
-	], Memes: [
-		{n: ':troll:', w: 18, h: 15, p: '-1px -70px'},
-		{n: ':lol:', w: 17, h: 20, p: '-20px -70px'},
-		{n: ':megusta:', w: 22, h: 23, p: '-38px -70px'},
-		{n: ':no:', w: 20, h: 20, p: '-61px -70px'},
-		{n: ':raeg:', w: 20, h: 20, p: '-61px -91px'},
-		{n: ':pface:', w: 14, h: 19, p: '-82px -70px'},
-		{n: ':falone:', w: 26, h: 24, p: '-82px -90px'},
-		{n: ':ohplz:', w: 17, h: 19, p: '-1px -94px'},
-		{n: ':ydsay:', w: 20, h: 16, p: '-19px -94px'},
-		{n: ':doge:', w: 20, h: 20, p: '-97px -69px'}
-	], Other: [
-		{n: '@<3@', w: 15, h: 13, p: '-61px -114px'},
-		{n: ':yoshi:', w: 16, h: 16, p: '-1px -114px'},
-		{n: ':msonic:', w: 16, h: 16, p: '-18px -114px'},
-		{n: ':pball:', w: 14, h: 15, p: '-35px -114px'},
-		{n: ':file:', w: 10, h: 14, p: '-50px -114px'},
-		{n: '//to do', w: 16, h: 16, p: '-77px -114px'},
-		{n: ':cake:', w: 15, h: 15, p: '-94px -115px'},
-		{n: ':mario:', w: 15, h: 15, p: '-110px -115px'},
-		{n: ':luigi:', w: 15, h: 14, p: '-126px -116px'},
-		{n: ':ds:', w: 15, h: 15, p: '-1px -131px'},
-		{n: ':burger:', w: 15, h: 15, p: '-17px -130px'},
-		{n: ':taco:', w: 15, h: 15, p: '-33px -130px'},
-		{n: ':icecream:', w: 15, h: 15, p: '-49px -130px'}
+interface EmoteDict { [c: string]: EmoteCat; }
+type EmoteCat = Emote[];
+interface Emote {
+	n: string, i: string;
+}
+
+var emoticons: EmoteDict = {
+	'Faces': [
+		{n: ':)', i: 'happy.gif'},
+		{n: ':D', i: 'icon_cheesygrin.gif'},
+		{n: ';)', i: 'icon_wink.gif'},
+		{n: ':S', i: 'icon_confused.gif'},
+		{n: ':@', i: 'icon_mad.gif'},
+		{n: "-_-'", i: 'buy_sweat.png'},
+		{n: ':O', i: 'icon_amazed.gif'},
+		{n: 'xD', i: 'ecksdee.png'},
+		{n: ':fp:', i: 'icon_facepalm.gif'},
+		{n: 'R:', i: 'epic.png'},
+		{n: 'RB:', i: 'rbow.png'},
+		{n: 'R(', i: 'icon_unknown1.png'},
+		{n: ':ponything:', i: 'icon_ponything.jpg'},
+		{n: ':dummy:', i: 'reklshum.gif'},
+		{n: ':nuu:', i: 'nuu.gif'}
+	], 'Memes': [
+		{n: ':troll:', i: 'icon_trollface.png'},
+		{n: ':lol:', i: 'lol.png'},
+		{n: ':megusta:', i: 'icon_megusta.jpg'},
+		{n: ':no:', i: 'no.png'},
+		{n: ':raeg:', i: 'raeg.png'},
+		{n: ':pface:', i: 'pokerface.png'},
+		{n: ':falone:', i: 'icon_foreveralone.jpg'},
+		{n: ':ohplz:', i: 'please.png'},
+		{n: ':ydsay:', i: 'buy_youdontsay.png'},
+		{n: ':doge:', i: 'doge.png'}
+	], 'Other': [
+		{n: '@<3@', i: 'icon_bheart.gif'},
+		{n: ':yoshi:', i: 'buy_yoshi.png'},
+		{n: ':msonic:', i: 'buy_sonic.png'},
+		{n: ':pball:', i: 'buy_pokeball.jpg'},
+		{n: ':file:', i: 'icon_file.png'},
+		{n: '//to do', i: 'icon_todo.png'},
+		{n: ':cake:', i: 'icon_cake.gif'},
+		{n: ':mario:', i: 'icon_mario.png'},
+		{n: ':luigi:', i: 'icon_luigi.png'},
+		{n: ':ds:', i: 'icon_ds.gif'},
+		{n: ':burger:', i: 'icon_burger.gif'},
+		{n: ':taco:', i: 'icon_taco.gif'},
+		{n: ':icecream:', i: 'icon_icecream.gif'},
+		{n: '[woofie!]', i: 'wolfthing.gif'}
 	]
 };
 
@@ -918,12 +931,12 @@ $('#plus-emoticonPickerBtn').click(function() {
 	$('#plus-emoticonPicker, #plus-emoticonPickerBtn').toggleClass('active');
 });
 
-_.each(emoticons, function(emotes, cat) {
-	$('#plus-emoticonPicker').append($('<hr>', {title: cat}));
-	_.each(emotes, function(emote) {
-		$("#plus-emoticonPicker").append($('<span/>', {css: {
-				backgroundPosition: emote.p, width: emote.w, height: emote.h
-		}}).click(function() { appendToTextbox(emote.n); }).attr('title', emote.n));
+_.each(emoticons, function(cat, name) {
+	$('#plus-emoticonPicker').append($('<hr>', {title: name}));
+	_.each(cat, function(emote) {
+		var img = $('<img>', { src: chrome.extension.getURL('res/emotes/'+emote.i) });
+		img.click(function() { appendToTextbox(emote.n); }).attr('title', emote.n);
+		$("#plus-emoticonPicker").append(img);
 	});
 });
 

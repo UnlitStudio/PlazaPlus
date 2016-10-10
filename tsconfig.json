@@ -6,15 +6,13 @@
 		"noImplicitAny": true,
 		"noImplicitReturns": true,
 		"module": "commonjs",
-		"target": "es5",
-		"jsx": "react"
+		"target": "es6"
 	},
 	"files": [
-		"./typings/index.d.ts",
-		"./src/bg.ts",
-		"./src/chat.ts",
-		"./src/chatNav.ts",
-		"./src/help.ts",
-		"./src/options.ts"
+		"src/bg.ts",
+		"src/chat.ts",
+		"src/chatNav.ts",
+		"src/help.ts",
+		"src/options.ts"
 	]
 }
