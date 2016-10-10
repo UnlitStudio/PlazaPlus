@@ -500,6 +500,10 @@ commands['sperm'] = (param) => new Promise(function(ok, err) {
 commands['/to'] = function(param) {
 	return Promise.resolve(' //to ' + param.join(' '));
 };
+commands['thd'] = function(param) {
+	window.open('/forums/topic.php?topic='+param.shift(), '_top');
+	return Promise.resolve();
+};
 
 function getUsers(users: string[]) {
 	// For some reason, this has to be PromiseLike<string>[]
