@@ -10,5 +10,6 @@ npm install
 
 ## Building
 - `grunt`: Compiles JavaScript files and creates manifest.json
+- `grunt watch`: Automatically compile files as they are changed
 - `grunt zip`: Compresses the files into a ZIP file for the Chrome Web Store
 - `grunt clean`: Deletes compiled files

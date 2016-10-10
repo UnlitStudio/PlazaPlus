@@ -3,7 +3,7 @@ function common() { return js('common'); }
 function js(v) { return 'js/'+v+'.js'; }
 function cjs(v) { return [vendor(), common(), js(v)]; }
 
-({
+module.exports = {
 	manifest_version: 2,
 	name: 'Plaza+',
 	version: '4.8',
@@ -31,4 +31,4 @@ function cjs(v) { return [vendor(), common(), js(v)]; }
 	],
 	web_accessible_resources: ['res/chatInject.js', 'res/*.ogg', 'res/emotes/*'],
 	applications: {gecko: {id: '@plaza-plus'}}
-})
+};

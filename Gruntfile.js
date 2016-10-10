@@ -1,7 +1,11 @@
 var path = require('path');
 
 module.exports = function(grunt) {
-	var manifest = eval(grunt.file.read('manifest.js'));
+	var webpack = require('./webpack.config.js');
+	var wpwatch = require('./webpack.config.js');
+	wpwatch.watch = true;
+	wpwatch.keepalive = true;
+
 	grunt.initConfig({
 		clean: {
 			dist: ['dist/', '*.zip'],
@@ -30,17 +34,34 @@ module.exports = function(grunt) {
 			main: {expand: true, cwd: 'js/', src: '*.js', dest: 'dist/'},
 			options: {compress: {dead_code: true}, mangle: false}
 		},
-		webpack: {main: require('./webpack.config.js')}
+		watch: {
+			manifest: {
+				files: ['manifest.js'],
+				tasks: ['manifest'],
+				options: {
+					atBegin: true, spawn: false
+				}
+			},
+			webpack: {
+				files: [],
+				tasks: ['webpack:watch'],
+				options: {
+					atBegin: true, spawn: false
+				}
+			}
+		},
+		webpack: {main: webpack, watch: wpwatch}
 	});
 	
 	grunt.loadNpmTasks('grunt-contrib-clean');
 	grunt.loadNpmTasks('grunt-contrib-compress');
 	grunt.loadNpmTasks('grunt-contrib-uglify');
+	grunt.loadNpmTasks('grunt-contrib-watch');
 	grunt.loadNpmTasks('grunt-webpack');
 	grunt.registerTask('manifest', 'Creates manifest.json', function() {
-		grunt.file.write('manifest.json', JSON.stringify(manifest));
+		grunt.file.write('manifest.json', JSON.stringify(require('./manifest.js')));
 	});
 	
-	grunt.registerTask('default', ['manifest', 'webpack']);
+	grunt.registerTask('default', ['manifest', 'webpack:main']);
 	grunt.registerTask('zip', ['clean', 'default', 'uglify', 'compress']);
 };
