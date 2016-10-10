@@ -1003,4 +1003,8 @@ $(document).on('paste', function(evt) {
 	}
 });
 
+_.defer(function() {
+	if ($('#ptSettings').length) chatErr('Notice: PlazaTools has been discontinued and is no longer compatible with Plaza+. It is recommended that you uninstall PlazaTools.');
+});
+
 chatMsg('Welcome to Plaza+! Type /+help for help with Plaza+.');
