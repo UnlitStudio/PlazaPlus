@@ -6,8 +6,8 @@ function cjs(v) { return [vendor(), common(), js(v)]; }
 ({
 	manifest_version: 2,
 	name: 'Plaza+',
-	version: '4.8',
-	version_name: '4.8',
+	version: '4.8.1',
+	version_name: '4.8.1',
 	
 	description: 'Adds several new features and commands to the 3DSPlaza chatrooms.',
 	icons: {128: 'icon.png'},
