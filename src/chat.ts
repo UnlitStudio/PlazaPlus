@@ -563,7 +563,6 @@ function getChat(str: string): string {
 	switch (_.toLower(str)) {
 		case 'v3original': case 'original': case 'orig': return 'v3original';
 		case 'v3rp': case 'rp': case 'rper': case 'roleplay': case 'roleplayer': return 'v3rp';
-		case 'v3rpaux': case 'rpaux': case 'auxrp': return 'v3rpaux';
 		case 'r9k': case 'robot9000': case 'r9000': case 'robot9k': return 'r9k';
 		default: return null;
 	}
