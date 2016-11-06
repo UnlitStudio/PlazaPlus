@@ -691,11 +691,10 @@ var chatRead = _.throttle(function() {
 		line.prop('plused', true);
 		var nametag = $(this).children('span:first-child');
 		var name = findUsername(nametag);
-		if (!name) nametag = $();
 		var idRegex = html.match(/<!---cmid:(\d+)-->/);
 		var id = _.toInteger(idRegex ? idRegex[1] : -1);
 		var msg = stripHTML(undoEmotes(html));
-		msg = msg.substr(nametag.text().length);
+		if (name) msg = msg.substr(stripHTML(undoEmotes(nametag.html())).length);
 		var wRegex = html.match(/<span style="font-size: 75%; background-color: cyan; opacity: 0\.75; color: blue;">to ([^<]+)<\/span>/);
 		var whisper = wRegex ? wRegex[1] : undefined;
 		var warn = !!html.match(/<span style="color: red;"><u>(! Warning (?:[^<]*) !)<\/u><\/span>/);
