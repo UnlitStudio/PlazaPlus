@@ -1,8 +1,9 @@
 var path = require('path');
+var clone = require('lodash.clone');
 
 module.exports = function(grunt) {
 	var webpack = require('./webpack.config.js');
-	var wpwatch = require('./webpack.config.js');
+	var wpwatch = clone(webpack);
 	wpwatch.watch = true;
 	wpwatch.keepalive = true;
 
