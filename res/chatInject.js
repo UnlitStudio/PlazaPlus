@@ -6,4 +6,7 @@
 	sendpost = function() {
 		document.getElementById('send').click();
 	};
+	document.addEventListener('plusNoEgg', function() {
+		throwEgg = function() {};
+	});
 })();

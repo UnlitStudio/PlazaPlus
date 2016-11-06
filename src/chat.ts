@@ -507,6 +507,13 @@ commands['thd'] = function(param) {
 	window.open('/forums/topic.php?topic='+encodeURIComponent(param.shift()), '_blank');
 	return Promise.resolve();
 };
+commands['noegg'] = function() {
+	chatMsg('Eggs removed.');
+	var evt = document.createEvent('Event');
+	evt.initEvent('plusNoEgg', true, false);
+	document.dispatchEvent(evt);
+	return Promise.resolve();
+};
 
 function getUsers(users: string[]) {
 	// For some reason, this has to be PromiseLike<string>[]
