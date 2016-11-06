@@ -501,7 +501,7 @@ commands['/to'] = function(param) {
 	return Promise.resolve(' //to ' + param.join(' '));
 };
 commands['thd'] = function(param) {
-	window.open('/forums/topic.php?topic='+param.shift(), '_blank');
+	window.open('/forums/topic.php?topic='+encodeURIComponent(param.shift()), '_blank');
 	return Promise.resolve();
 };
 
