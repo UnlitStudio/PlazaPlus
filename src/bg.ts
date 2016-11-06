@@ -27,9 +27,6 @@ chrome.runtime.onConnect.addListener(function(port) {
 	// message listeners
 	var listeners: MsgListenReg = {};
 	listeners['openOptions'] = function() { chrome.runtime.openOptionsPage(); };
-	listeners['openHelp'] = function(page: string) {
-		window.open(chrome.extension.getURL('util/help.html'+(page?'#'+page:'')));
-	};
 	listeners['notify'] = function(type: string, notif: {user: string; msg: string; warn: boolean}) {
 		var user = notif.user, chat = getChat(chatroom);
 		if (user) {} // Don't modify the name

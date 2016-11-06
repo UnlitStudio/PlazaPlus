@@ -5,7 +5,6 @@ module.exports = {
 		bg: './src/bg.ts',
 		chat: './src/chat.ts',
 		chatNav: './src/chatNav.ts',
-		help: './src/help.ts',
 		options: './src/options.ts',
 		vendor: ['jquery', 'lodash', 'linkifyjs', 'tinycolor2']
 	},

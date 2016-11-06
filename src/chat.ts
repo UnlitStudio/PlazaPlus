@@ -445,10 +445,13 @@ commands['focus'] = (param) => new Promise(function(ok, err) {
 		ok();
 	}
 });
-commands['+help'] = function(param) {
-	sendMessage('openHelp', param.shift());
+commands['+wiki'] = function(param) {
+	var page = param.shift();
+	page = page ? '/'+_.kebabCase(_.toLower(page)) : '';
+	window.open('https://github.com/UnlitStudio/PlazaPlus/wiki'+page, '_blank');
 	return Promise.resolve();
 };
+commands['+help'] = commands['+wiki'];
 commands['cspl'] = (param) => new Promise(function(ok, err) {
 	var cmd = param.shift();
 	if (cmd != 'steal' && cmd != 'stealhsv') return ok('/cspl '+cmd+' '+param.join(' '));
@@ -1005,4 +1008,4 @@ _.defer(function() {
 	if ($('#ptSettings').length) chatErr('Notice: PlazaTools has been discontinued and is no longer compatible with Plaza+. It is recommended that you uninstall PlazaTools.');
 });
 
-chatMsg('Welcome to Plaza+! Type /+help for help with Plaza+.');
+chatMsg('Welcome to Plaza+! Type /+wiki to open the wiki.');
