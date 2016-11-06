@@ -446,7 +446,7 @@ commands['focus'] = (param) => new Promise(function(ok, err) {
 	}
 });
 commands['+wiki'] = function(param) {
-	var page = param.shift();
+	var page = param.join(' ');
 	page = page ? '/'+_.kebabCase(_.toLower(page)) : '';
 	window.open('https://github.com/UnlitStudio/PlazaPlus/wiki'+page, '_blank');
 	return Promise.resolve();
