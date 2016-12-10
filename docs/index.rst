@@ -7,7 +7,6 @@ To get started, here are some useful pages to look at:
 	
 	commands
 	destinations
-	aliases
 	csplit
 	colordefs
 	colorfilters
