@@ -1,9 +1,8 @@
 Commands
 ========
 
-.. note::
-
-	The ``/pm`` command is not included here because it is currently broken.
+.. note:: Some commands are not included here because they are currently broken.
+.. ``/pm <user> <subject>``
 
 .. toctree::
 

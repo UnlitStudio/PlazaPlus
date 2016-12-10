@@ -14,21 +14,19 @@ Each color is separated by a slash (``/``).
 
 If you prefer HSV gradients, you can use that too by adding `hsv:` before the colors.  
 
-	Example: `/cspl conf Username=hsv:gray/blue`
+	Example: ``/cspl conf Username=hsv:gray/blue``
 
 If you didn't know, a rainbow gradient is actually the same as a HSV gradient from red to violet.
 There's no need to remember that because you can also use `rainbow` instead of a color list:  
 
-	Example: `/cspl conf Username=rainbow`  
-	Same as: `/cspl conf Username=hsv:red/violet`
+	Example: ``/cspl conf Username=rainbow``
+	Same as: ``/cspl conf Username=hsv:red/violet``
 
 -----
 
 Plaza+ also adds in a cSplit stealer: ``/cspl steal <user> [your username]``
 
-.. tip::
-
-	If you have an alias with the tag "Me", you don't have to provide your username.
+.. tip:: If you have an alias with the tag "Me", you don't have to provide your username.
 
 -----
 
