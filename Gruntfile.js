@@ -37,7 +37,7 @@ module.exports = function(grunt) {
 		},
 		watch: {
 			manifest: {
-				files: ['manifest.js'],
+				files: ['manifest.yml'],
 				tasks: ['manifest'],
 				options: {
 					atBegin: true, spawn: false
@@ -60,7 +60,7 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-contrib-watch');
 	grunt.loadNpmTasks('grunt-webpack');
 	grunt.registerTask('manifest', 'Creates manifest.json', function() {
-		grunt.file.write('manifest.json', JSON.stringify(require('./manifest.js')));
+		grunt.file.write('manifest.json', JSON.stringify(grunt.file.readYAML('manifest.yml')));
 	});
 	
 	grunt.registerTask('default', ['manifest', 'webpack:main']);
