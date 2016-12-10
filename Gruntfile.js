@@ -15,11 +15,8 @@ module.exports = function(grunt) {
 		compress: {
 			dist: {
 				files: [
-					{
-						src: [
-							'res/**', 'util/**', 'icon.png', 'LICENSE', 'manifest.json'
-						], dest: '/'
-					}, {expand: true, cwd: 'dist/', src: '**', dest: 'js/'}
+					{src: ['res/**', 'util/**', 'icon.png', 'manifest.json'], dest: '/'},
+					{expand: true, cwd: 'dist/', src: '**', dest: 'js/'}
 				], options: {archive: 'dist.zip'}
 			},
 			src: {
