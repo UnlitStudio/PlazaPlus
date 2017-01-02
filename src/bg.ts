@@ -1,23 +1,20 @@
-import * as _ from 'lodash';
 import * as $ from 'jquery';
-import Enums from './enums';
+import * as Enums from './enums';
 import getChat from './func/getChatName';
+import * as storage from './helpers/storage';
 import {sendMsgFactory, listenForMsgs, SendMsgFunc, MsgListenReg} from './func/portHelpers';
-import {Dict} from './helpers/types';
 
 type ChatList = {[room: string]: (() => void)[]};
 type MainList = {[room: string]: SendMsgFunc};
 var chatTabs = {list: <ChatList>{}, main: <MainList>{}};
 
-if (!chrome.storage.sync) chrome.storage.sync = chrome.storage.local;
-
-chrome.runtime.onConnect.addListener(function(port) {
-	if (!_.startsWith(port.name, "chat:")) return;
+chrome.runtime.onConnect.addListener(port => {
+	if (!port.name.startsWith("chat:")) return;
 	var chatroom = port.name.substr(5);
 	var main = false;
 	
 	var sendMessage = sendMsgFactory(port);
-	var setMain = function() {
+	var setMain = () => {
 		main = true; chatTabs.main[chatroom] = sendMessage; sendMessage('newMain');
 	};
 	
@@ -26,80 +23,83 @@ chrome.runtime.onConnect.addListener(function(port) {
 	
 	// message listeners
 	var listeners: MsgListenReg = {};
-	listeners['openOptions'] = function() { chrome.runtime.openOptionsPage(); };
-	listeners['notify'] = function(type: string, notif: {user: string; msg: string; warn: boolean}) {
+	listeners['openOptions'] = () => { chrome.runtime.openOptionsPage(); };
+	listeners['notify'] = async (type: Enums.NotifyType, notif: {user: string; msg: string; warn: boolean}) => {
 		var user = notif.user, chat = getChat(chatroom);
 		if (user) {} // Don't modify the name
 		else if (notif.warn) user = '[Warning]';
 		else user = '[Unknown]';
-		chrome.storage.sync.get(['notifyIgnore', 'notifySound', 'notifyVolume'], function(items) {
-			if (_.includes(_.map(_.split(items['notifyIgnore'], ' '), _.toLower), _.toLower(user))) return;
-			new Promise(function(ok, err) {
-				if (user == '[Warning]' || user == '[Unknown]') return ok();
-				$.ajax('http://3dsplaza.com/chat3/nav.php', {
-					data: {loc: 'user', who: user}, success: function(d) {
-						var id = d.match(/'\/INTERNAL-ignore (?:\+|-) (\d+)';/);
-						if (id) ok(id[1]); else ok();
-					}, timeout: 3000, dataType: 'text',
-					error: function() { ok(); }
-				});
-			}).then(function(id) {
-				var url = 'http://3dsplaza.com/profile_pics/default.png';
-				if (id) url = `http://3dsplaza.com/profile_pics/${id}.jpg`;
-				chrome.notifications.create({
-					type: 'basic', iconUrl: url,
-					title: (function() {
-						switch (type) {
-							case 'whisper': return user+' whispered to you in Chatroom '+chat;
-							default: return user+' mentioned you in Chatroom '+chat;
-						}
-					})(), message: notif.msg, isClickable: false
-				});
-				var a = new Audio(); a.src = chrome.extension.getURL('res/'+items['notifySound']);
-				a.volume = items['notifyVolume'] / 100; a.play();
+		const items = await storage.get(['notifyIgnore', 'notifySound', 'notifyVolume']);
+		if (items['notifyIgnore'].split(' ').map(''.toLowerCase).indexOf(user.toLowerCase())>=0) return;
+		new Promise((ok, err) => {
+			if (user == '[Warning]' || user == '[Unknown]') return ok();
+			$.ajax('http://3dsplaza.com/chat3/nav.php', {
+				data: {loc: 'user', who: user}, success: d => {
+					var id = d.match(/'\/INTERNAL-ignore (?:\+|-) (\d+)';/);
+					if (id) ok(id[1]); else ok();
+				}, timeout: 3000, dataType: 'text',
+				error: () => { ok(); }
 			});
+		}).then(id => {
+			var url = 'http://3dsplaza.com/profile_pics/default.png';
+			if (id) url = `http://3dsplaza.com/profile_pics/${id}.jpg`;
+			chrome.notifications.create({
+				type: 'basic', iconUrl: url,
+				title: (() => {
+					switch (type) {
+						case Enums.NotifyType.WHISPER:
+							return user+' whispered to you in Chatroom '+chat;
+						case Enums.NotifyType.MENTION:
+							return user+' mentioned you in Chatroom '+chat;
+					}
+				})(), message: notif.msg, isClickable: false
+			});
+			var a = new Audio(); a.src = chrome.extension.getURL('res/'+items['notifySound']);
+			a.volume = items['notifyVolume'] / 100; a.play();
 		});
 	};
-	
 	listenForMsgs(port, listeners);
 	
-	port.onDisconnect.addListener(function() {
+	port.onDisconnect.addListener(() => {
 		if (main) {
 			delete chatTabs.main[chatroom];
 			if (chatTabs.list[chatroom].length) chatTabs.list[chatroom].shift()();
-		} else chatTabs.list[chatroom] = _.without(chatTabs.list[chatroom], setMain);
+		} else {
+			let index = chatTabs.list[chatroom].indexOf(setMain);
+			if (index > -1) chatTabs.list[chatroom].splice(index, 1);
+		}
 	});
 });
 
-chrome.alarms.onAlarm.addListener(function(alarm) {
+chrome.alarms.onAlarm.addListener(async alarm => {
 	if (alarm.name != 'icons') return;
-	chrome.storage.local.get(['iconCache'], function(items) {
-		var rev = items['iconCache'].Revision;
-		$.ajax('https://erman.rocks/services/plaza+/rev.php', {
-			success: function(data) {
-				if (data != rev) $.ajax('https://erman.rocks/services/plaza+/icons.json', {
-					success: function(icons) {
-						if (icons.Revision) chrome.storage.local.set({iconCache: icons});
-					}, timeout: 10000, dataType: 'json', cache: false
-				});
-			}, timeout: 10000, dataType: 'text', cache: false
-		});
+	const items = await storage.get('iconCache');
+	var rev = items['iconCache']["Revision"];
+	$.ajax('https://erman.rocks/services/plaza+/rev.php', {
+		success: data => {
+			if (data != rev) $.ajax('https://erman.rocks/services/plaza+/icons.json', {
+				success: icons => {
+					if (icons.Revision) storage.set({iconCache: icons});
+				}, timeout: 10000, dataType: 'json', cache: false
+			});
+		}, timeout: 10000, dataType: 'text', cache: false
 	});
 });
 chrome.alarms.create('icons', {delayInMinutes: 1, periodInMinutes: 3});
 
-type Storage = Dict<any>;
-type Updater = (storage: Storage) => Storage;
-interface Version {
-	id: string; local?: Updater; sync?: Updater;
-}
-var updates: Version[] = [
-	{id: '4.7'}
-];
+// This is done so we don't need to provide defaults every time we get from storage.
+chrome.storage.local.get(Enums.storageDef, items => {
+	const error = chrome.runtime.lastError;
+	if (error) console.error("Error loading for storage initialization.", error.message);
+	else
+		storage.set(items).catch(e => {
+			console.error("Error saving for storage initialization.", e);
+		});
+});
 
 function checkNewer(older: string, newer: string): boolean {
-	var oldVer = _.map(_.split(older+'.0.0.0', '.', 4), _.toInteger);
-	var newVer = _.map(_.split(newer+'.0.0.0', '.', 4), _.toInteger);
+	var oldVer = (older+'.0.0.0').split('.', 4).map(Number);
+	var newVer = (newer+'.0.0.0').split('.', 4).map(Number);
 	if (newVer[0] < oldVer[0]) return false;
 	if (newVer[0] > oldVer[0]) return true;
 	if (newVer[1] < oldVer[1]) return false;
@@ -111,30 +111,24 @@ function checkNewer(older: string, newer: string): boolean {
 	return false;
 }
 
-// This is done so we don't need to provide defaults every time we get from storage.
-chrome.storage.local.get(Enums.localDef, function(items) {
-	chrome.storage.local.set(items);
-});
-chrome.storage.sync.get(Enums.syncDef, function(items) {
-	chrome.storage.sync.set(items);
-});
-
-chrome.runtime.onInstalled.addListener(function(details) {
+chrome.runtime.onInstalled.addListener(details => {
 	if (details.reason != 'update') return;
-	var localUpdates: Updater[] = [], syncUpdates: Updater[] = [];
-	_.each(updates, function(version) {
-		if (!checkNewer(details.previousVersion, version.id)) return;
-		if (version.local) localUpdates.push(version.local);
-		if (version.sync) syncUpdates.push(version.sync);
-	});
-	chrome.storage.local.get(function(items) {
-		chrome.storage.local.set(_.defaults(_.reduce(localUpdates, function(storage, updater) {
-			return updater(storage);
-		}, items), Enums.localDef));
-	});
-	chrome.storage.sync.get(function(items) {
-		chrome.storage.sync.set(_.defaults(_.reduce(syncUpdates, function(storage, updater) {
-			return updater(storage);
-		}, items), Enums.syncDef));
+	if (!chrome.storage.sync) return;
+	if (checkNewer(details.previousVersion, '4.9')) return;
+	
+	chrome.storage.sync.get(items => {
+		const error = chrome.runtime.lastError;
+		if (error) {
+			console.error('Error loading sync storage for migration.', error.message);
+			return;
+		}
+		storage.set(items).then(() => {
+			chrome.storage.sync.clear(() => {
+				const error = chrome.runtime.lastError;
+				if (error) console.error("Error clearing sync storage after migration.", error.message);
+			});
+		}).catch(e => {
+			console.error('Error migrating sync storage to local storage.', e);
+		});
 	});
 });

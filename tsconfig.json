@@ -5,10 +5,9 @@
 		"forceConsistentCasingInFileNames": true,
 		"noImplicitAny": true,
 		"noImplicitReturns": true,
-		"module": "commonjs",
-		"target": "es5",
-		"lib": ["dom", "es6", "es2015.promise"],
-		"types": ["chrome", "jquery", "lodash", "tinycolor"]
+		"target": "es6",
+		"types": ["chrome", "jquery", "lodash", "tinycolor"],
+		"importHelpers": false
 	},
 	"files": [
 		"src/bg.ts",

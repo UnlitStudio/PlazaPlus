@@ -1,20 +1,20 @@
-import * as _ from 'lodash';
 import * as $ from 'jquery';
 import * as tinycolor from 'tinycolor2';
 import * as linkifyJq from 'linkifyjs/jquery';
-import Enums from './enums';
+import * as Enums from './enums';
 import {sendMsgFactory, listenForMsgs, MsgListenReg} from './func/portHelpers';
-import {storageListen} from './helpers/storage';
-import {Dict, IDict} from './helpers/types';
+import * as storage from './helpers/storage';
+import {Dict, Alias} from './helpers/types';
 linkifyJq($);
 
-var chatIns = _.rest(function(objs: any[]) {
-	$('#demo').prepend(_.concat(objs, '<!--d-->'));
-});
-// Wrapped because I don't exactly want to keep canRun in memory.
-(function(){
+function chatIns(...objs: any[]) {
+	objs.push('<!--d-->');
+	$('#demo').prepend(objs);
+}
+
+{
 	// Make sure Plaza+ has all it needs to function.
-	var canRun =
+	let canRun =
 		$('#demo').length === 0 ? false :
 		$('#online').length === 0 ? 'The chat did not load correctly. Please refresh.' :
 		$('#bericht').length === 0 ? 'You must be logged in and not banned to use Plaza+.' :
@@ -23,11 +23,11 @@ var chatIns = _.rest(function(objs: any[]) {
 	// Is throwing an error the best way to terminate a content script?
 	// I don't want to have to wrap the whole script in a function.
 	if (canRun === false) throw new Error('The chat did not load correctly. Please refresh.');
-	else if (_.isString(canRun)) {
-		$('#demo').prepend($('<span/>', {text: ': '+canRun, css: {color: 'red'}}), '<br>', '<!--d-->');
+	else if (typeof canRun == 'string') {
+		chatErr(canRun);
 		throw new Error(canRun);
 	}
-})();
+}
 
 import './chat.less';
 
@@ -38,14 +38,13 @@ function chatErr(msg: string) {
 	chatIns($('<div/>', {text: ': '+msg, css: {color: 'red'}}));
 }
 function microtime() {
-	var now = _.now() / 1000, s = parseInt(String(now), 10);
-	return (Math.round((now - s) * 1000) / 1000) + ' ' + s;
+	var now = $.now() / 1e3, s = now | 0;
+	return (Math.round((now - s) * 1e3) / 1e3) + ' ' + s;
 }
-interface Alias { user: string; tag: string; }
 
 var chatroom = (/\?room=(.*)/.exec($('.contain_inside form').attr('action')) || ['','v3original'])[1];
 var port = chrome.runtime.connect({name: 'chat:'+chatroom}), mainTab = false;
-var active = 0, boxes: TextBox[] = [], icons: Dict<string> = {}, aliases: Dict<Alias> = {};
+var active = 0, boxes: TextBox[] = [], icons: storage.IconCache = {}, aliases: Dict<Alias> = {};
 var focusList: string[] = [], focusMode = 'blur', isFocus = false, asyncLock = 0, notifyNames = '';
 var notifyWhispers = false, lastWhisp: string = null, onlineSort = false;
 var colorNormal = '#0000ff', colorNoob = '#00ffff', colorMod = '#00ff00';
@@ -54,17 +53,15 @@ var colorBanned = '#ff0000', colorIgnored = '#000000';
 // Chrome doesn't allow unsafeWindow. D:<
 // Instead, we have to inject an event listener into the page.
 var oldsp: () => void;
-(function() {
-	var s = document.createElement('script');
+{
+	let s = document.createElement('script');
 	s.src = chrome.extension.getURL('res/chatInject.js');
 	s.onload = function() { $(this).remove(); };
 	document.body.appendChild(s);
-	var evt = document.createEvent('Event');
+	let evt = document.createEvent('Event');
 	evt.initEvent('plusSendChat', true, false);
 	oldsp = function() { document.dispatchEvent(evt); };
-})();
-
-if (!chrome.storage.sync) chrome.storage.sync = chrome.storage.local;
+}
 
 // message helpers
 var sendMessage = sendMsgFactory(port);
@@ -82,14 +79,11 @@ port.onDisconnect.addListener(function() {
 	setTimeout(function() { location.reload(); }, 1000);
 });
 
-storageListen({
+storage.listen({
 	iconCache(v) {
 		icons = v; $('.plusicon').attr('src', null);
-		_.each(v, function(v, k) {
-			$('.chatline[user="'+_.toLower(k)+'"] .plusicon').attr('src', v);
-		});
-	}
-}, {
+		for (let user in icons) $('.chatline[user="'+user+'"] .plusicon').attr('src', icons[user]);
+	},
 	hideTabs(v) {
 		$('#pluscss1').text(v ? '#plusbtn0,#plusbtn1,#plusbtn2,#plusbtn3,#plusbtn4{width:0px !important}' : '');
 	},
@@ -108,7 +102,8 @@ storageListen({
 });
 
 $('body').addClass('plazaplus');
-_.times(3, function(i) { $('<style/>', {id: 'pluscss'+i}).appendTo('head'); });
+for (let i = 0; i < 3; i++)
+	$('<style/>', {id: 'pluscss'+i}).appendTo('head');
 $('<span/>', {id: 'plazaPlusRunning'}).appendTo('body');
 $('#bericht, #send').addClass('plusbox plusbox0');
 $('form:first').html('Change your name color:<br>').append(
@@ -145,9 +140,9 @@ class DestWhisp implements Dest {
 	test() { var user = this.user; return new Promise<string>(function(ok, err) {
 		$.ajax('../chat3/nav.php', {
 			data: {loc: 'user', who: user}, success: function(d: string) {
-				if (_.includes(d, 'This user does not seem to exist.'))
+				if (d.includes('This user does not seem to exist.'))
 					err('The user '+user+" doesn't exist.");
-				else if (_.includes(d, 'You cannot whisper'))
+				else if (d.includes('You cannot whisper'))
 					err("You can't whisper "+user+" because you aren't friends with them.");
 				else ok();
 			}, timeout: 3000, dataType: 'text', error: function() { ok(); }
@@ -197,12 +192,12 @@ class DestPM implements Dest {
 				type: 'POST', data: {
 					to: user, subject: subj, message: msg, checktime: microtime(), send: 'Send'
 				}, success: function(d) {
-					if (_.includes(d, 'Your message has been sent succesfully!'))
+					if (d.includes('Your message has been sent succesfully!'))
 						ok('sent');
-					else if (_.includes(d, 'You are currently banned'))
+					else if (d.includes('You are currently banned'))
 						err("You can't send PMs while banned.");
-					else if (_.includes(d, " doesn't exist!")) err('The user '+user+" doesn't exist.");
-					else if (_.includes(d, 'friends can send PMs to'))
+					else if (d.includes(" doesn't exist!")) err('The user '+user+" doesn't exist.");
+					else if (d.includes('friends can send PMs to'))
 						err("You can't PM "+user+" because you aren't friends with them.");
 					else ok('unknown');
 				}, timeout: 3000, dataType: 'text',
@@ -214,12 +209,12 @@ class DestPM implements Dest {
 
 $('<div/>', {class: 'plusbtn', id: 'plusopt'}).click(function() { sendMessage('openOptions'); })
 	.append($('<div/>')).attr('title', 'Plaza+ Options').appendTo('#plusbar');
-_.times(5, function(n) {
+for (let i = 0; i < 5; i++) {
 	var box = new TextBox(new DestChat()), title = box.dest.info();
 	boxes.push(box);
-	$('<div/>', {class: 'plusbtn', id: 'plusbtn'+n}).click(function() { setActive(n); })
+	$('<div/>', {class: 'plusbtn', id: 'plusbtn'+i}).click(function() { setActive(i); })
 		.append('<div/>').attr('title', 'Chat').appendTo('#plusbar');
-});
+}
 setActive(0);
 
 /*function aliasCmd(txt, noparam) { return function(cb, param, dest) {
@@ -236,12 +231,11 @@ commands['query'] = (param) => new Promise(function(ok) {
 });
 commands['ignore'] = (param) => new Promise(function(ok, err) {
 	getUser(param.shift()).then(function(user) {
-		// witty 1 liners amirite?
 		if (!user) return err('Please specify a user.');
 		$.ajax('../chat3/nav.php', {
 			data: {loc: 'user', who: user}, success: function(d) {
 				var id = d.match(/'\/INTERNAL-ignore (?:\+|-) (\d+)';/);
-				if (_.includes(d, 'This user does not seem to exist.'))
+				if (d.includes('This user does not seem to exist.'))
 					err('The user '+user+" doesn't exist.");
 				else if (id) sendChat('/INTERNAL-ignore + ' + id[1]);
 				else err('Failed to retrieve '+user+"'s member ID.");
@@ -257,7 +251,7 @@ commands['unignore'] = (param) => new Promise(function(ok, err) {
 		$.ajax('../chat3/nav.php', {
 			data: {loc: 'user', who: user}, success: function(d) {
 				var id = d.match(/'\/INTERNAL-ignore (?:\+|-) (\d+)';/);
-				if (_.includes(d, 'This user does not seem to exist.'))
+				if (d.includes('This user does not seem to exist.'))
 					err('The user '+user+" doesn't exist.");
 				else if (id) sendChat('/INTERNAL-ignore - ' + id[1]);
 				else err('Failed to retrieve '+user+"'s member ID.");
@@ -267,7 +261,7 @@ commands['unignore'] = (param) => new Promise(function(ok, err) {
 		});
 	});
 });
-commands['overraeg'] = (param) => Promise.resolve('/raeg ' + _.repeat(':)', 20));
+commands['overraeg'] = (param) => Promise.resolve('/raeg ' + ':)'.repeat(10));
 commands['+ver'] = function() {
 	var ver = chrome.runtime.getManifest().version_name;
 	chatMsg('You are using Plaza+ '+ver);
@@ -302,24 +296,32 @@ commands['pm'] = (param) => new Promise<ChatMsg>(function(ok, err) {
 	});
 });
 commands['alias'] = function(param) {
-	var tag = param.shift(), user = param.shift(), name = _.toLower(tag || '');
+	var tag = param.shift(), user = param.shift(), name = (tag || '').toLowerCase();
 	if (!tag) {
-		chatMsg(
-			_.isEmpty(aliases) ? 'No aliases are set.' :
-			'Aliases: ' + oxford(_.map(aliases, _.template('<%= tag %> is <%= user %>')))
-		); return Promise.resolve();
+		let list: string[] = [];
+		for (let key in aliases) {
+			let alias = aliases[key];
+			list.push(alias.tag+' is '+alias.user);
+		}
+		chatMsg(list.length ? 'Aliases: ' + oxford(list) : 'No aliases are set.');
+		return Promise.resolve();
 	} else if (user) {
-		aliases[name] = {tag: tag, user: user}; chatMsg('Alias '+tag+' has been set to '+user+'.');
+		aliases[name] = {tag: tag, user: user};
+		chatMsg('Alias '+tag+' has been set to '+user+'.');
 	} else if (aliases[name]) {
-		delete aliases[name]; chatMsg('Alias '+tag+' has been deleted.');
+		delete aliases[name];
+		chatMsg('Alias '+tag+' has been deleted.');
 	} else {
-		chatMsg('Alias '+tag+' is not set.'); return Promise.resolve();
+		chatMsg('Alias '+tag+' is not set.');
+		return Promise.resolve();
 	}
-	return new Promise(function(ok, err) {
-		chrome.storage.sync.set({aliases: aliases}, function() {
-			if (chrome.runtime.lastError) return err('Failed to save aliases: ' + chrome.runtime.lastError);
+	return new Promise(async function(ok, err) {
+		try {
+			await storage.set({aliases: aliases});
 			ok();
-		});
+		} catch (e) {
+			err('Failed to save aliases: ' + chrome.runtime.lastError);
+		}
 	});
 };
 commands['room'] = function(param) {
@@ -339,23 +341,23 @@ commands['transfer'] = function(param) {
 			if (!user) return err('Please specify a user to transfer points to.');
 			$.ajax('/apps/points_transfer/transfer_process.php', {
 				type: 'POST', data: {amount: amt, to: user, checktime: microtime()}, success: function(d) {
-					if (_.includes(d, 'You cannot transfer points to yourself!'))
+					if (d.includes('You cannot transfer points to yourself!'))
 						err('Are you trying to be greedy? Give those points to someone else!');
-					else if (_.includes(d, 'The user you entered doesnt exist!'))
+					else if (d.includes('The user you entered doesnt exist!'))
 						err('The user '+name+" doesn't exist.");
 					else if (
-						_.includes(d, 'You dont have enough points to transfer!') ||
-						_.includes(d, 'bigger than the amount you can transfer!')
+						d.includes('You dont have enough points to transfer!') ||
+						d.includes('bigger than the amount you can transfer!')
 					) err("You're not a wizard. No transferring points you don't have.");
-					else if (_.includes(d, 'You can only send whole points'))
+					else if (d.includes('You can only send whole points'))
 						err("Points aren't cookies. They must be given whole.");
-					else if (_.includes(d, 'You havent entered the amount to transfer'))
+					else if (d.includes('You havent entered the amount to transfer'))
 						err("Why enter this command if you're not transferring any points?");
-					else if (_.includes(d, 'You can not transfer less than 1 point!'))
+					else if (d.includes('You can not transfer less than 1 point!'))
 						err("Don't make me divide by 0!");
-					else if (_.includes(d, 'The ammount of points you entered is not a number'))
+					else if (d.includes('The ammount of points you entered is not a number'))
 						err("Woah! That's a number now?! :O");
-					else if (_.includes(d, 'Successfully transferred'))
+					else if (d.includes('Successfully transferred'))
 						err(`Successfully transferred ${amt} point${amt=='1'?'':'s'} to ${user}!`);
 					else err('An error occurred while transferring.');
 				}, timeout: 3000, dataType: 'text', error: function() {
@@ -366,15 +368,17 @@ commands['transfer'] = function(param) {
 	});
 };
 commands['slap'] = function(param) {
-	var item = _.sample(['fish','gym sock','skunk','diaper','cheese wedge']);
-	return Promise.resolve(`/me slaps ${param.join(' ')} with a smelly ${item}.`);
+	const target = param.join(' ');
+	const items = ['fish','gym sock','skunk','diaper','cheese wedge'];
+	const item = items[Math.floor(Math.random() * items.length)];
+	return Promise.resolve(`/me slaps ${target} with a smelly ${item}.`);
 };
 commands['rptag'] = (param) => new Promise(function(ok, err) {
 	var tag = param.join(' ');
 	if (!tag)
 		$.ajax('../chat3/nav.php?loc=rptags&drop=', {
 			success: function(d) {
-				if (_.includes(d, '<br>Dropped<br>')) {
+				if (d.includes('<br>Dropped<br>')) {
 					chatMsg('Your RP tag has been dropped.'); ok();
 				} else err('An error occurred while trying to drop your RP tag.');
 			}, timeout: 3000, dataType: 'text',
@@ -385,15 +389,15 @@ commands['rptag'] = (param) => new Promise(function(ok, err) {
 	else
 		$.ajax('../chat3/nav.php?loc=rptags', {
 			type: 'POST', data: {play: '', role: tag, set: 'Set RP tags'}, success: function(d) {
-				if (_.includes(d, '<br>Set<br>')) {
+				if (d.includes('<br>Set<br>')) {
 					chatMsg(`Your RP tag has been set to ${tag}.`); ok();
 				} else err('An error occurred while trying to set your RP tag.');
 			}, timeout: 3000, dataType: 'text',
 			error: function() { chatMsg("Plaza+ can't confirm that your RP tag was set."); ok(); }
 		});
 });
-commands['focus'] = (param) => new Promise(function(ok, err) {
-	var focused: string[] = [], blurred: string[] = [], action = param.shift();
+commands['focus'] = (param) => new Promise(async function(ok, err) {
+	var focused: string[] = [], blurred: string[] = [];
 	function icb() {
 		$('#pluscss2').text((function() { switch (focusMode) {
 			case 'blur': return '.blur{filter:blur(1px);-webkit-filter:blur(1px)}.blur:hover{filter:initial;-webkit-filter:initial}';
@@ -411,13 +415,14 @@ commands['focus'] = (param) => new Promise(function(ok, err) {
 			if (focusList.length) {
 				var user = $(this).attr('user');
 				if (user) {
-					if (_.includes(_.map(focusList, _.toLower), _.toLower(user))) $(this).removeClass('blur');
+					if (focusList.map(''.toLowerCase).indexOf(user.toLowerCase())>=0) $(this).removeClass('blur');
 					else $(this).addClass('blur');
 				} else $(this).addClass('blur');
 			} else $(this).removeClass('blur');
 		});
 		ok();
 	}
+	const action = param.shift();
 	switch (action) {
 		case 'clear': case 'reset':
 			chatMsg('Focus list has been cleared.');
@@ -428,30 +433,38 @@ commands['focus'] = (param) => new Promise(function(ok, err) {
 			focusMode = action;
 			return icb();
 	}
-	param.unshift(action); param = _.compact(param);
-	if (param.length)
+	param.unshift(action);
+	param = param.filter(Boolean);
+	if (param.length) {
+		const users = await getUsers(param);
 		getUsers(param).then(function(users) {
-			_.each(users, function(user) {
+			users.forEach(function(user) {
 				if (!user) return;
-				var index = _.indexOf(_.map(focusList, _.toLower), _.toLower(user));
-				if (index == -1) { focusList.push(user); focused.push(user); }
-				else { focusList.splice(index, 1); blurred.push(user); }
-			}); icb();
+				var index = focusList.map(''.toLowerCase).indexOf(user.toLowerCase());
+				if (index < 0) {
+					focusList.push(user);
+					focused.push(user);
+				} else {
+					focusList.splice(index, 1);
+					blurred.push(user);
+				}
+			});
+			icb();
 		});
-	else {
+	} else {
 		if (focusList.length == 1) chatMsg(focusList[0] + ' is currently focused.');
 		else if (focusList.length > 1) chatMsg(oxford(focusList) + ' are currently focused.');
 		else chatMsg('No users are currently focused.');
 		ok();
 	}
 });
-commands['+wiki'] = function(param) {
+commands['+docs'] = function(param) {
 	var page = param.join(' ');
-	page = page ? '/'+_.kebabCase(_.toLower(page)) : '';
-	window.open('https://github.com/UnlitStudio/PlazaPlus/wiki'+page, '_blank');
+	window.open('http://pplus.ga/docs' + (page && 'earch?q='+encodeURIComponent(page)), '_blank');
 	return Promise.resolve();
 };
-commands['+help'] = commands['+wiki'];
+commands['+wiki'] = commands['+docs'];
+commands['+help'] = commands['+docs'];
 commands['cspl'] = (param) => new Promise(function(ok, err) {
 	var cmd = param.shift();
 	if (cmd != 'steal' && cmd != 'stealhsv') return ok('/cspl '+cmd+' '+param.join(' '));
@@ -461,8 +474,8 @@ commands['cspl'] = (param) => new Promise(function(ok, err) {
 			getUser(param.shift()).then(function(you) {
 				if (!you && aliases['Me']) you = me;
 				if (!you) return err('Please specify your username.');
-				if (_.includes(you, '=')) return err('Please specify your username.');
-				var usr = onlineList[_.toLower(user)];
+				if (you.includes('=')) return err('Please specify your username.');
+				var usr = onlineList[user.toLowerCase()];
 				if (!usr) return err("Couldn't find "+user+' on the online list.');
 				you = you + '='; if (cmd == 'stealhsv') you = you + 'hsv:';
 				$('#bericht').val('/cspl conf ' + (parseCspl(you + usr.cspl.join('/')))[0]);
@@ -491,7 +504,7 @@ commands['sperm'] = (param) => new Promise(function(ok, err) {
 	else return err('Invalid command.');
 	var room = param.shift();
 	if (!room) {
-		if (!_.startsWith(chatroom, 'v3study'))
+		if (!chatroom.startsWith('v3study'))
 			return err('Please specify a study room.');
 		room = chatroom.substr(7);
 	}
@@ -516,11 +529,7 @@ commands['noegg'] = function() {
 };
 
 function getUsers(users: string[]) {
-	// For some reason, this has to be PromiseLike<string>[]
-	// instead of Promise<string>[], otherwise getUsers will
-	// return Promise<Promise<string>[]> instead of
-	// Promise<string[]>
-	var usrs: PromiseLike<string>[] = _.map(users, function(user) {
+	var usrs = users.map(function(user) {
 		return getUser(user);
 	});
 	return Promise.all(usrs);
@@ -564,38 +573,46 @@ function sendChat(txt: string, raw?: boolean) {
 }
 
 function oxford(a: string[]) {
-	return a.length < 3 ? _.join(a, ' and ') : _.join(_.initial(a), ', ') + ', and ' + _.last(a);
+	if (a.length < 3) return a.join(' and ');
+	return a.slice(0, -1).join(', ') + ', and ' + a[a.length - 1];
 }
 
 import emotify from './func/emotify';
 
 function getChat(str: string): string {
-	switch (_.toLower(str)) {
+	switch (str.toLowerCase()) {
 		case 'v3original': case 'original': case 'orig': return 'v3original';
 		case 'v3rp': case 'rp': case 'rper': case 'roleplay': case 'roleplayer': return 'v3rp';
 		case 'r9k': case 'robot9000': case 'r9000': case 'robot9k': return 'r9k';
-		default: return null;
+		case 'mod': case 'modescape': return 'modescape';
 	}
+	if (str.startsWith('study')) return 'v3'+str;
+	if (str.startsWith('v3study')) return str;
+	return null;
 }
 
 function undoEmotes(v: string) {
-	return v.replace(/<img src="(?:[^"]*)" alt="([^"]*)">/g, function(match, alt) {
-		return _.escape(alt);
+	return v.replace(/<img src="(?:[^"]*)" alt="([^"]*)">/g, function(match, alt: string) {
+		return alt.replace(/</g, '&lt;');
 	});
 }
 
 interface User { user: string; tag?: string; }
-function getUser(user: string) { return new Promise<string>(function(ok, err) {
-	var name = _.toLower(user);
-	chrome.storage.sync.get('aliases', function(items) {
-		var usr = items['aliases'][name];
+function getUser(user: string) { return new Promise<string>(async function(ok, err) {
+	const name = user.toLowerCase();
+	try {
+		let items = await storage.get('aliases');
+		const usr = items['aliases'][name];
 		if (!usr) return ok(user);
 		ok(usr.user);
-	});
+	} catch (e) {
+		console.error('Failed to get aliases to find user.', user, e);
+		ok(user);
+	}
 }); }
 
 function stripHTML(v: string) {
-	return _.unescape(v.replace(/<(?:.|\n)*?>/gm, ''));
+	return v.replace(/<(?:.|\n)*?>/gm, '').replace(/&lt;/g, '<');
 }
 
 function lockAsync() {
@@ -617,14 +634,14 @@ type ChatLine = {txt?: string, dest?: Dest};
 function parsePost(txt: string, dest?: Dest): Promise<ChatLine> {
 	var param = txt.split(' '), cmd = param.shift();
 	if (cmd.charAt(0) != '/') return Promise.resolve({txt: emotify(txt), dest: dest});
-	cmd = _.toLower(cmd.substr(1));
+	cmd = cmd.substr(1).toLowerCase();
 	if (!commands[cmd]) {
 		return Promise.resolve({txt: txt, dest: dest});
 	}
 	return new Promise(function(ok, err) {
 		commands[cmd](param, dest).then(function(chat?: ChatMsg) {
 			if (!chat) chat = {};
-			if (_.isString(chat)) chat = {txt: <string>chat};
+			if (typeof chat == 'string') chat = {txt: <string>chat};
 			var line = <ChatLine>chat;
 			if (!line.dest) line.dest = dest;
 			ok(line);
@@ -657,7 +674,7 @@ $('#bericht').attr({'onkeypress': null}).keydown(function(e) {
 	if (asyncLock > 0) return false;
 	var key = e.which, a = active, val = $('#bericht').val();
 	if (key == 13) {
-		if (_.startsWith(val, '/cspl conf ')) {
+		if (val.startsWith('/cspl conf ')) {
 			$('#bericht').val('/cspl conf '+parseCspl(val.substr(11), -1)[0]);
 		}
 		sp(); return false;
@@ -669,14 +686,14 @@ $('#bericht').attr({'onkeypress': null}).keydown(function(e) {
 	setActive(a);
 	return false;
 }).on('input', function() {
-	if (!_.startsWith($('#bericht').val(), '/cspl conf ')) return;
+	if (!$('#bericht').val().startsWith('/cspl conf ')) return;
 	var val = $('#bericht').val(), sel = (<HTMLInputElement>$('#bericht')[0]).selectionStart;
 	var end = val.substr(sel - 1, 1);
 	if (end != ' ' && end != '\\') return;
 	if (end == '\\') val = val.substr(0, sel-1) + val.substr(sel);
 	var csp = parseCspl(val.substr(11), sel - 11);
 	var spc = val != '/cspl conf ' && val.substr(-1) == ' ';
-	$('#bericht').val('/cspl conf ' + _.trim(csp[0]) + (spc ? ' ' : ''));
+	$('#bericht').val('/cspl conf ' + csp[0].trim() + (spc ? ' ' : ''));
 	if (csp[1]) (<HTMLInputElement>$('#bericht')[0]).setSelectionRange(csp[2] + 12, csp[2] + 12);
 });
 
@@ -687,12 +704,19 @@ function findUsername(tag: JQuery): string | undefined {
 	if (!tag.length) return undefined;
 	if (tag.find('span[style^="background"]').length) return undefined;
 	var name = tag.children('span[style^="font"]:first-child');
-	if (name.length) return _(name.text()).split(' ').last();
-	else return _.trimEnd(tag.text(), ':');
+	if (name.length) return name.text().split(' ').slice(-1)[0];
+	else return tag.text().slice(0, -1);
+}
+
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 var chatCheck = 0;
-var chatRead = _.throttle(function() {
+var chatThrottle = false;
+function chatRead() {
+	if (chatThrottle) return;
+	chatThrottle = true;
 	$($('#demo > div').not('[plused]').get().reverse()).each(function() {
 		var line = $(this);
 		var text = line.text();
@@ -701,23 +725,23 @@ var chatRead = _.throttle(function() {
 		var nametag = $(this).children('span:first-child');
 		var name = findUsername(nametag);
 		var idRegex = html.match(/<!---cmid:(\d+)-->/);
-		var id = _.toInteger(idRegex ? idRegex[1] : -1);
+		var id = Number(idRegex ? idRegex[1] : -1);
 		var msg = stripHTML(undoEmotes(html));
 		if (name) msg = msg.substr(stripHTML(undoEmotes(nametag.html())).length);
 		var wRegex = html.match(/<span style="font-size: 75%; background-color: cyan; opacity: 0\.75; color: blue;">to ([^<]+)<\/span>/);
 		var whisper = wRegex ? wRegex[1] : undefined;
 		var warn = !!html.match(/<span style="color: red;"><u>(! Warning (?:[^<]*) !)<\/u><\/span>/);
-		if (whisper) msg = msg.replace(new RegExp('to '+_.escapeRegExp(whisper)+'$'), '');
-		msg = _.trim(msg);
+		if (whisper) msg = msg.replace(new RegExp('to '+escapeRegExp(whisper)+'$'), '');
+		msg = msg.trim();
 		var enc = false;
 		if (msg.match(/^###ascii###( \d+)+$/)) {
 			let reg = /(\d+)+/g, chr: RegExpExecArray, en = '';
-			while ((chr = reg.exec(msg)) !== null) en += String.fromCharCode(_.toNumber(chr[1]));
+			while ((chr = reg.exec(msg)) !== null) en += String.fromCharCode(Number(chr[1]));
 			msg = en; enc = true;
 		}
-		var nregex = '(' + _.join(_.map(_.compact(_.split(notifyNames, ' ')), _.escapeRegExp), '|') + ')';
+		var nregex = '(' + notifyNames.split(' ').filter(Boolean).map(escapeRegExp).join('|') + ')';
 		var ment = nregex != "()" ? !!msg.match(new RegExp(nregex, 'i')) : undefined;
-		var user = name ? _.toLower(name) : undefined;
+		var user = name ? name.toLowerCase() : undefined;
 		var fay = user == 'fayne_aldan' && (whisper == 'you' || !whisper);
 		if (whisper == 'you' && name) lastWhisp = name;
 		if (id > chatCheck) {
@@ -725,10 +749,6 @@ var chatRead = _.throttle(function() {
 				line.before($('<div/>', {text: ': Chat decrypted: '+msg, css: {color: 'gray'}}), '<!--d-->');
 			if (mainTab && chatCheck > 0) {
 				if (id == -1) {} // Don't notify.
-				else if (fay && _.includes(msg, '!+check')) (function() {
-					var vers = chrome.runtime.getManifest().version_name;
-					sendChat(`/whisperto ${name} Using Plaza+ ${vers}`, true);
-				})();
 				else if (whisper == 'you' && notifyWhispers)
 					sendMessage('notify', 'whisper', {user: name, msg: msg, warn: warn});
 				else if (ment)
@@ -739,15 +759,16 @@ var chatRead = _.throttle(function() {
 			let icon = $('<img>').addClass('plusicon');
 			if (icons[user]) icon.attr('src', icons[user]);
 			line.addClass('chatline');
-			if (focusList.length > 0 && !_.includes(_.map(focusList, _.toLower), user)) line.addClass('blur');
+			if (focusList.length > 0 && focusList.map(''.toLowerCase).indexOf(user)<0) line.addClass('blur');
 			line.attr('user', user);
 			line.prepend(icon, ' ');
 		}
 		line.linkify({ignoreTags: ['script']});
 	});
 	var idCheck = $('#demo').html().match(/<!---cmid:(\d+)-->/);
-	if (idCheck) chatCheck = _.toNumber(idCheck[1]);
-});
+	if (idCheck) chatCheck = Number(idCheck[1]);
+	setTimeout(() => chatThrottle = false, 0);
+}
 new MutationObserver(chatRead).observe($('#demo')[0], {childList: true});
 chatRead();
 
@@ -756,7 +777,10 @@ interface OnlineUser {
 }
 var onlineList: Dict<OnlineUser> = {}, onlineCache: string | boolean = null;
 var onlineTime: [number, number, number] = [0,0,0], onlineTimer: number = null;
-var onlineRead = _.throttle(function() {
+var onlineThrottle = false;
+function onlineRead() {
+	if (onlineThrottle) return;
+	onlineThrottle = true;
 	var html = $('#online').html();
 	if (onlineCache == html) return;
 	if (onlineCache === true) return;
@@ -767,7 +791,7 @@ var onlineRead = _.throttle(function() {
 	onlineTimer = window.setInterval(onlineUpd, 1000);
 	if (html.match(/Warning:/)) online = onlineList;
 	else
-		_.each(_.initial(brarray), function(v) {
+		brarray.slice(0,-1).forEach(function(v) {
 			var rReg = v.match(/background-color: ([a-z]+);/);
 			var rank: string = 'normal';
 			if (rReg) rank = (function(){ switch (rReg[1]) {
@@ -783,19 +807,20 @@ var onlineRead = _.throttle(function() {
 			var regex = /<span style="color:\s?(#?[A-Za-z0-9]*);">(.+?)<\/span>/g;
 			while ((c = regex.exec(v)) !== null) {
 				user += c[2];
-				_.times(c[2].length, function(i) { // jshint ignore:line
+				for (let i = 0; i < c[2].length; i++) {
 					cspl.push(c[1]);
 					conf.push(c[2][i]+'='+tinycolor(c[1]).toHexString());
-				});
+				}
 			}
 			var csp = conf.join(' ');
-			online[_.toLower(user)] = {
+			online[user.toLowerCase()] = {
 				user: user, cspl: cspl, conf: csp, rank: rank, away: away, timeout: to, ignore: ignore
 			};
 		});
 	onlineList = online;
 	onlineWrite();
-});
+	setTimeout(() => onlineThrottle = false, 0);
+};
 function onlineUpd() {
 	var time = onlineTime;
 	time[2] = time[2] + 1;
@@ -806,7 +831,7 @@ function onlineUpd() {
 			if (time[0] == 24) time[0] = 0;
 		}
 	}
-	var tm = _.map(time, function(v) { return ('0'+v).substr(-2); }).join(':');
+	var tm = time.map(function(v) { return ('0'+v).substr(-2); }).join(':');
 	onlineCache = true;
 	$('#onlineTime').text(tm);
 	onlineCache = $('#online').html();
@@ -817,7 +842,7 @@ function onlineWrite() {
 		$('<u/>', {text: 'Users Online'}),
 		$('<span/>', {
 			id: 'onlineTime', css: {'float': 'right'},
-			text: _.map(onlineTime, function(v) { return ('0'+v).substr(-2); }).join(':')
+			text: onlineTime.map(function(v) { return ('0'+v).substr(-2); }).join(':')
 		})
 	);
 	function entry(user: OnlineUser, div: JQuery) {
@@ -843,29 +868,37 @@ function onlineWrite() {
 		if (user.away) name.css('opacity', 0.5);
 		name = $('<b/>').appendTo(name);
 		if (user.ignore) name = $('<s/>').appendTo(name);
-		_.each(user.conf.split(' '), function(seg) {
+		user.conf.split(' ').forEach(function(seg) {
 			var colors = seg.split('=');
 			name.append($('<span/>', {text: colors.shift(), css: {color: colors.join('=')}}));
 		});
 	}
-	function section(id: string, title?: string) {
+	type OnlineGrouped = {mod: OnlineUser[], normal: OnlineUser[], banned: OnlineUser[]};
+	function section(id: keyof OnlineGrouped, title?: string) {
 		var div = $('#online');
 		if (!group[id]) return;
 		if (title) {
 			$('<div/>', {text: title, 'class': 'onlinehead'}).appendTo('#online');
 			div = $('<div/>').appendTo('#online');
 		}
-		_.each(group[id], function(user) { entry(user, div); });
+		group[id].forEach(function(user) { entry(user, div); });
 	}
-	var group = _.groupBy(onlineList, function(v) {
-		var r = v.rank;
-		return r == 'mod' ? 'mod' : r == 'banned' ? 'banned' : 'normal';
-	});
+	var group: OnlineGrouped = {mod: [], normal: [], banned: []};
+	for (let k in onlineList) {
+		let v = onlineList[k];
+		switch (v.rank) {
+			case 'mod': group.mod.push(v);
+			case 'banned': group.banned.push(v);
+			default: group.normal.push(v);
+		}
+	}
 	if (onlineSort) {
 		section('mod', 'Chat Mods');
 		section('normal', 'Normal Users');
 		section('banned', 'Banned Users');
-	} else _.each(onlineList, _.partial(entry, _, $('#online')));
+	} else for (let k in onlineList) {
+		entry(onlineList[k], $('#online'));
+	}
 	onlineCache = $('#online').html();
 }
 new MutationObserver(onlineRead).observe($('#online')[0], {childList: true});
@@ -939,14 +972,15 @@ $('#plus-emoticonPickerBtn').click(function() {
 	$('#plus-emoticonPicker, #plus-emoticonPickerBtn').toggleClass('active');
 });
 
-_.each(emoticons, function(cat, name) {
+for (let name in emoticons) {
+	let cat = emoticons[name];
 	$('#plus-emoticonPicker').append($('<hr>', {title: name}));
-	_.each(cat, function(emote) {
+	cat.forEach(function(emote) {
 		var img = $('<img>', { src: chrome.extension.getURL('res/emotes/'+emote.i) });
 		img.click(function() { appendToTextbox(emote.n); }).attr('title', emote.n);
 		$("#plus-emoticonPicker").append(img);
 	});
-});
+}
 
 // imgur uploader
 $('body').append(
@@ -1000,7 +1034,8 @@ $('#plus-imgurUploadInput').change(function() { uploadToImgur((<HTMLInputElement
 
 $(document).on('paste', function(evt) {
 	var items = (<ClipboardEvent>evt.originalEvent).clipboardData.items, blob: File = null;
-	_.each(items, function(item) { if (_.startsWith(item.type, 'image')) blob = item.getAsFile(); });
+	for (let k in items)
+		if (items[k].type.startsWith('image')) blob = items[k].getAsFile();
 
 	if (blob) {
 		var reader = new FileReader();
@@ -1011,8 +1046,8 @@ $(document).on('paste', function(evt) {
 	}
 });
 
-_.defer(function() {
+setTimeout(() => {
 	if ($('#ptSettings').length) chatErr('Notice: PlazaTools has been discontinued and is no longer compatible with Plaza+. It is recommended that you uninstall PlazaTools.');
-});
+}, 0);
 
 chatMsg('Welcome to Plaza+! Type /+wiki to open the wiki.');
