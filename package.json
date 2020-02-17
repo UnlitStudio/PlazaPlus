@@ -1,7 +1,7 @@
 {
   "name": "plazaplus",
   "devDependencies": {
-    "css-loader": "^0.26.1",
+    "css-loader": "^0.28.11",
     "grunt": "^1.0.0",
     "grunt-contrib-clean": "^1.0.0",
     "grunt-contrib-compress": "^1.1.0",
