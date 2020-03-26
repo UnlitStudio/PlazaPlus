@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@types/chrome": "0.0.36",
-    "@types/jquery": "^2.0.33",
+    "@types/jquery": "^3.3.34",
     "@types/lodash": "^4.14.37",
     "@types/tinycolor": "^1.1.27",
     "jquery": "^3.1.0",
